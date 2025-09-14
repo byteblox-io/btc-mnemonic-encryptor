@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BTC Mnemonic Encryptor</title>
+</head>
+
+<body>
+  <div class="app-container">
+    <!-- Header Section -->
+    <header class="header-section">
+      <h1 class="app-title">BTC Mnemonic Encryptor</h1>
+      <p class="app-subtitle">Professional BTC Mnemonic AES-256-GCM Encryption Protection Tool</p>
+    </header>
+
+    <!-- Network Status Warning -->
+    <div id="network-warning" class="network-warning hidden">
+      <div class="warning-content">
+        <span class="warning-icon">⚠️</span>
+        <div class="warning-text">
+          <strong>Network Connection Detected</strong>
+          <p>For maximum security, please disconnect from the internet before performing encryption/decryption
+            operations.</p>
+        </div>
+        <button id="dismiss-warning" class="warning-dismiss">×</button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Tab Navigation -->
+      <div class="tab-nav">
+        <button class="tab-button active" data-tab="encrypt">🔒 Encrypt Mnemonic</button>
+        <button class="tab-button" data-tab="decrypt">🔓 Decrypt Mnemonic</button>
+      </div>
+
+      <!-- Encrypt Tab -->
+      <div id="encrypt-tab" class="tab-content active">
+        <div class="input-section btc-mnemonic-section">
+          <div class="section-header">
+            <label class="section-title">🔑 BTC Mnemonic Input</label>
+            <div class="header-buttons">
+              <button id="format-mnemonic-btn" class="secondary-button" disabled>
+                ✨ Format Mnemonic
+              </button>
+            </div>
+          </div>
+          <p class="help-text">Please enter your BTC mnemonic for encryption. Supports 12, 15, 18, 21, or 24 word BIP39 mnemonics.
+            Virtual keyboard will automatically suggest matching mnemonic words.</p>
+          <div class="mnemonic-input-container">
+            <div class="input-group">
+              <textarea id="btc-mnemonic-input" class="text-area mnemonic-input"
+                placeholder="Please enter your BTC mnemonic (e.g., abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about)"
+                rows="3"></textarea>
+              <button class="keyboard-btn" data-target="btc-mnemonic-input">⌨️</button>
+            </div>
+          </div>
+
+          <!-- Mnemonic Validation Status -->
+          <div id="mnemonic-validation-status" class="mnemonic-status hidden">
+            <div class="status-content">
+              <span id="mnemonic-status-icon" class="status-icon">⏳</span>
+              <div class="status-text">
+                <span id="mnemonic-status-message" class="status-message">Validating mnemonic...</span>
+                <div id="mnemonic-status-details" class="status-details"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="credentials-section">
+          <div class="input-section">
+            <div class="section-header">
+              <label class="section-title">Passphrase (EFF Large Wordlist)</label>
+              <button id="generate-passphrase-btn" class="secondary-button">
+                🎲 Generate Secure Passphrase
+              </button>
+            </div>
+            <p class="help-text">Enter 3+ words separated by single spaces (e.g., 'correct horse battery staple')</p>
+            <div class="passphrase-reminder" style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+              <strong>⚠️ Important:</strong> Please write down and securely store your passphrase. You will need it to decrypt your mnemonic. Without it, your encrypted data cannot be recovered!
+            </div>
+            <div class="passphrase-inputs">
+              <div class="input-field">
+                <label class="field-label">Passphrase:</label>
+                <div class="input-with-keyboard">
+                  <input type="text" id="encrypt-passphrase1" class="text-field" placeholder="Enter passphrase..." />
+                  <button class="keyboard-btn" data-target="encrypt-passphrase1">⌨️</button>
+                </div>
+              </div>
+              <div class="input-field">
+                <label class="field-label">Confirm Passphrase:</label>
+                <div class="input-with-keyboard">
+                  <input type="text" id="encrypt-passphrase2" class="text-field" placeholder="Confirm passphrase..." />
+                  <button class="keyboard-btn" data-target="encrypt-passphrase2">⌨️</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="input-section">
+            <label class="section-title">Personal Password (Optional)</label>
+            <p class="help-text">A memorable password that you can easily remember (optional)</p>
+            <div class="password-reminder" style="background: #d1ecf1; border: 1px solid #bee5eb; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 0.9em;">
+              🔑 <strong>Tip:</strong> You can optionally add a personal password for additional security. If provided, both passphrase and password will be required for decryption.
+            </div>
+            <div class="password-inputs">
+              <div class="input-field">
+                <label class="field-label">Password (Optional):</label>
+                <div class="input-with-keyboard">
+                  <input type="password" id="encrypt-password1" class="text-field" placeholder="Enter password (optional)..." />
+                  <button class="keyboard-btn" data-target="encrypt-password1" data-password="true">⌨️</button>
+                </div>
+              </div>
+              <div class="input-field">
+                <label class="field-label">Confirm Password (Optional):</label>
+                <div class="input-with-keyboard">
+                  <input type="password" id="encrypt-password2" class="text-field" placeholder="Confirm password (optional)..." />
+                  <button class="keyboard-btn" data-target="encrypt-password2" data-password="true">⌨️</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Validation Messages -->
+        <div id="encrypt-validation" class="validation-box hidden"></div>
+
+        <!-- Advanced Crypto Options -->
+        <div class="input-section">
+          <label class="section-title">🔧 Advanced Cryptographic Options</label>
+          <div class="advanced-options">
+            <div class="option-group">
+              <label class="field-label">Key Derivation Method:</label>
+              <select id="key-derivation-method" class="select-field">
+                <option value="pbkdf2" selected>PBKDF2-HMAC-SHA256 (Recommended)</option>
+                <option value="argon2">Argon2 (Advanced)</option>
+              </select>
+              <p class="help-text">PBKDF2 is widely supported, Argon2 provides enhanced security against specialized attacks</p>
+            </div>
+            <div class="option-group">
+              <label class="field-label">
+                <input type="checkbox" id="enable-advanced-crypto" class="checkbox-field" />
+                Enable Advanced Cryptographic Features
+              </label>
+              <p class="help-text">Includes SHA256 file integrity verification and enhanced metadata</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Section -->
+        <div class="action-section">
+          <div class="encrypt-buttons">
+            <button id="encrypt-btn" class="primary-button" disabled>
+              🔒 Encrypt Mnemonic
+            </button>
+            <button id="encrypt-with-wallet-btn" class="secondary-button" disabled>
+              🏷️ Encrypt with Wallet Label
+            </button>
+          </div>
+          <div id="encrypt-progress" class="progress-indicator hidden"></div>
+          <span id="encrypt-status" class="status-label">Ready to encrypt</span>
+        </div>
+
+        <!-- Result Section -->
+        <div class="result-section">
+          <div class="result-header">
+            <label class="section-title">Encryption Result</label>
+            <button id="save-encrypted-btn" class="secondary-button" disabled>
+              💾 Save to File
+            </button>
+          </div>
+          <textarea id="encrypt-result" class="result-area" placeholder="Encrypted mnemonic will be displayed here..."
+            readonly rows="4"></textarea>
+        </div>
+      </div>
+
+      <!-- Decrypt Tab -->
+      <div id="decrypt-tab" class="tab-content">
+        <div class="input-section">
+          <div class="result-header">
+            <label class="section-title">Encrypted Mnemonic Content</label>
+            <div class="header-buttons">
+              <button id="show-file-info-btn" class="secondary-button" disabled>
+                ℹ️ File Information
+              </button>
+              <button id="load-encrypted-btn" class="secondary-button">
+                📁 Load from File
+              </button>
+            </div>
+          </div>
+          <div class="input-group">
+            <textarea id="decrypt-content" class="text-area"
+              placeholder="Paste encrypted mnemonic content or load from file..." rows="4"></textarea>
+            <button class="keyboard-btn" data-target="decrypt-content">⌨️</button>
+          </div>
+        </div>
+
+        <div class="credentials-section">
+          <div class="input-section">
+            <label class="section-title">Passphrase</label>
+            <p class="help-text">The same passphrase used during encryption</p>
+            <div class="input-with-keyboard">
+              <input type="text" id="decrypt-passphrase" class="text-field" placeholder="Enter passphrase..." />
+              <button class="keyboard-btn" data-target="decrypt-passphrase">⌨️</button>
+            </div>
+          </div>
+
+          <div class="input-section">
+            <label class="section-title">Personal Password (Optional)</label>
+            <p class="help-text">The same personal password used during encryption (if provided)</p>
+            <div class="input-with-keyboard">
+              <input type="password" id="decrypt-password" class="text-field"
+                placeholder="Enter personal password (optional)..." />
+              <button class="keyboard-btn" data-target="decrypt-password" data-password="true">⌨️</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Validation Messages -->
+        <div id="decrypt-validation" class="validation-box hidden"></div>
+
+        <!-- Action Section -->
+        <div class="action-section">
+          <button id="decrypt-btn" class="primary-button" disabled>
+            🔓 Decrypt Mnemonic
+          </button>
+          <div id="decrypt-progress" class="progress-indicator hidden"></div>
+          <span id="decrypt-status" class="status-label">Ready to decrypt</span>
+        </div>
+
+        <!-- Result Section -->
+        <div class="result-section">
+          <label class="section-title">Decryption Result</label>
+          <textarea id="decrypt-result" class="result-area" placeholder="Decrypted mnemonic will be displayed here..."
+            readonly rows="5"></textarea>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Virtual Keyboard Modal -->
+  <div id="virtual-keyboard-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="keyboard-title">Virtual Keyboard</h3>
+        <button id="close-keyboard" class="close-btn">×</button>
+      </div>
+
+      <!-- Mnemonic Suggestions (above keyboard display) -->
+      <div id="keyboard-suggestions" class="keyboard-suggestions">
+        <div id="mnemonic-suggestions" class="mnemonic-suggestions hidden"></div>
+      </div>
+
+      <div class="keyboard-display">
+        <div id="keyboard-input-display" class="keyboard-input"></div>
+      </div>
+
+      <div class="keyboard-container">
+        <!-- Function Row -->
+        <div class="keyboard-row">
+          <button class="key-btn function-key" data-key="backspace">⌫ Backspace</button>
+          <button class="key-btn function-key" data-key="clear">Clear</button>
+        </div>
+
+        <!-- Number Row -->
+        <div class="keyboard-row">
+          <button class="key-btn" data-key="1" data-shift="!">1</button>
+          <button class="key-btn" data-key="2" data-shift="@">2</button>
+          <button class="key-btn" data-key="3" data-shift="#">3</button>
+          <button class="key-btn" data-key="4" data-shift="$">4</button>
+          <button class="key-btn" data-key="5" data-shift="%">5</button>
+          <button class="key-btn" data-key="6" data-shift="^">6</button>
+          <button class="key-btn" data-key="7" data-shift="&">7</button>
+          <button class="key-btn" data-key="8" data-shift="*">8</button>
+          <button class="key-btn" data-key="9" data-shift="(">9</button>
+          <button class="key-btn" data-key="0" data-shift=")">0</button>
+        </div>
+
+        <!-- First Letter Row -->
+        <div class="keyboard-row">
+          <button class="key-btn" data-key="q" data-shift="Q">q</button>
+          <button class="key-btn" data-key="w" data-shift="W">w</button>
+          <button class="key-btn" data-key="e" data-shift="E">e</button>
+          <button class="key-btn" data-key="r" data-shift="R">r</button>
+          <button class="key-btn" data-key="t" data-shift="T">t</button>
+          <button class="key-btn" data-key="y" data-shift="Y">y</button>
+          <button class="key-btn" data-key="u" data-shift="U">u</button>
+          <button class="key-btn" data-key="i" data-shift="I">i</button>
+          <button class="key-btn" data-key="o" data-shift="O">o</button>
+          <button class="key-btn" data-key="p" data-shift="P">p</button>
+        </div>
+
+        <!-- Second Letter Row -->
+        <div class="keyboard-row">
+          <button class="key-btn" data-key="a" data-shift="A">a</button>
+          <button class="key-btn" data-key="s" data-shift="S">s</button>
+          <button class="key-btn" data-key="d" data-shift="D">d</button>
+          <button class="key-btn" data-key="f" data-shift="F">f</button>
+          <button class="key-btn" data-key="g" data-shift="G">g</button>
+          <button class="key-btn" data-key="h" data-shift="H">h</button>
+          <button class="key-btn" data-key="j" data-shift="J">j</button>
+          <button class="key-btn" data-key="k" data-shift="K">k</button>
+          <button class="key-btn" data-key="l" data-shift="L">l</button>
+        </div>
+
+        <!-- Third Letter Row -->
+        <div class="keyboard-row">
+          <button class="key-btn" data-key="z" data-shift="Z">z</button>
+          <button class="key-btn" data-key="x" data-shift="X">x</button>
+          <button class="key-btn" data-key="c" data-shift="C">c</button>
+          <button class="key-btn" data-key="v" data-shift="V">v</button>
+          <button class="key-btn" data-key="b" data-shift="B">b</button>
+          <button class="key-btn" data-key="n" data-shift="N">n</button>
+          <button class="key-btn" data-key="m" data-shift="M">m</button>
+        </div>
+
+        <!-- Special Keys Row -->
+        <div class="keyboard-row">
+          <button class="key-btn special-key" id="shift-key" data-key="shift">⇧ Shift</button>
+          <button class="key-btn special-key" id="caps-key" data-key="caps">Caps</button>
+          <button class="key-btn space-key" data-key="space">Space</button>
+        </div>
+
+        <!-- Control Row -->
+        <div class="keyboard-row control-row">
+          <button class="key-btn control-key ok-key" id="keyboard-ok">✓ OK</button>
+          <button class="key-btn control-key cancel-key" id="keyboard-cancel">✗ Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+  
+  <style>
+    /* Additional styles for new modals */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 10px;
+      margin: 15px 0;
+    }
+    
+    .info-item {
+      display: contents;
+    }
+    
+    .info-item label {
+      font-weight: 500;
+      color: #495057;
+    }
+    
+    .info-item span {
+      color: #212529;
+    }
+    
+    .preset-label-btn.active {
+      background: #667eea !important;
+      color: white !important;
+    }
+    
+    .suggestion-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid #e9ecef;
+      transition: background-color 0.2s;
+    }
+    
+    .suggestion-item:hover {
+      background: #f8f9fa;
+    }
+    
+    .suggestion-item:last-child {
+      border-bottom: none;
+    }
+    
+    .suggestion-item.selected {
+      background: #667eea;
+      color: white;
+    }
+    
+    .mnemonic-suggestions {
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+    }
+    
+    .status-success {
+      color: #28a745;
+    }
+    
+    .status-error {
+      color: #dc3545;
+    }
+    
+    .status-info {
+      color: #17a2b8;
+    }
+  </style>
+</body>
+
+</html>
