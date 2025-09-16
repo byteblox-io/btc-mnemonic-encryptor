@@ -5,15 +5,15 @@
   <meta charset="UTF-8" />
   <link rel="stylesheet" href="styles.css" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BTC Mnemonic Encryptor</title>
+  <title>Seed Phrase Shield</title>
 </head>
 
 <body>
   <div class="app-container">
     <!-- Header Section -->
     <header class="header-section">
-      <h1 class="app-title">BTC Mnemonic Encryptor</h1>
-      <p class="app-subtitle">Professional BTC Mnemonic AES-256-GCM Encryption Protection Tool</p>
+      <h1 class="app-title">Seed Phrase Shield</h1>
+      <p class="app-subtitle">Professional Seed Phrase AES-256-GCM Encryption Protection Tool</p>
     </header>
 
     <!-- Network Status Warning -->
@@ -33,38 +33,38 @@
     <main class="main-content">
       <!-- Tab Navigation -->
       <div class="tab-nav">
-        <button class="tab-button active" data-tab="encrypt">🔒 Encrypt Mnemonic</button>
-        <button class="tab-button" data-tab="decrypt">🔓 Decrypt Mnemonic</button>
+        <button class="tab-button active" data-tab="encrypt">🔒 Encrypt Seed Phrase</button>
+        <button class="tab-button" data-tab="decrypt">🔓 Decrypt Seed Phrase</button>
       </div>
 
       <!-- Encrypt Tab -->
       <div id="encrypt-tab" class="tab-content active">
         <div class="input-section btc-mnemonic-section">
           <div class="section-header">
-            <label class="section-title">🔑 BTC Mnemonic Input</label>
+            <label class="section-title">🔑 Seed Phrase Input</label>
             <div class="header-buttons">
               <button id="format-mnemonic-btn" class="secondary-button" disabled>
-                ✨ Format Mnemonic
+                ✨ Format Seed Phrase
               </button>
             </div>
           </div>
-          <p class="help-text">Please enter your BTC mnemonic for encryption. Supports 12, 15, 18, 21, or 24 word BIP39 mnemonics.
-            Virtual keyboard will automatically suggest matching mnemonic words.</p>
+          <p class="help-text">Please enter your seed phrase for encryption. Supports 12, 15, 18, 21, or 24 word BIP39 seed phrases.
+            Virtual keyboard will automatically suggest matching seed phrase words.</p>
           <div class="mnemonic-input-container">
             <div class="input-group">
               <textarea id="btc-mnemonic-input" class="text-area mnemonic-input"
-                placeholder="Please enter your BTC mnemonic (e.g., abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about)"
+                placeholder="Please enter your seed phrase (e.g., abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about)"
                 rows="3"></textarea>
               <button class="keyboard-btn" data-target="btc-mnemonic-input">⌨️</button>
             </div>
           </div>
 
           <!-- Mnemonic Validation Status -->
-          <div id="mnemonic-validation-status" class="mnemonic-status hidden">
+          <div id="mnemonic-validation-status" class="seed-phrase-status hidden">
             <div class="status-content">
               <span id="mnemonic-status-icon" class="status-icon">⏳</span>
               <div class="status-text">
-                <span id="mnemonic-status-message" class="status-message">Validating mnemonic...</span>
+                <span id="mnemonic-status-message" class="status-message">Validating seed phrase...</span>
                 <div id="mnemonic-status-details" class="status-details"></div>
               </div>
             </div>
@@ -81,7 +81,7 @@
             </div>
             <p class="help-text">Enter 3+ words separated by single spaces (e.g., 'correct horse battery staple')</p>
             <div class="passphrase-reminder" style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
-              <strong>⚠️ Important:</strong> Please write down and securely store your passphrase. You will need it to decrypt your mnemonic. Without it, your encrypted data cannot be recovered!
+              <strong>⚠️ Important:</strong> Please write down and securely store your passphrase. You will need it to decrypt your seed phrase. Without it, your encrypted data cannot be recovered!
             </div>
             <div class="passphrase-inputs">
               <div class="input-field">
@@ -155,7 +155,7 @@
         <div class="action-section">
           <div class="encrypt-buttons">
             <button id="encrypt-btn" class="primary-button" disabled>
-              🔒 Encrypt Mnemonic
+              🔒 Encrypt Seed Phrase
             </button>
             <button id="encrypt-with-wallet-btn" class="secondary-button" disabled>
               🏷️ Encrypt with Wallet Label
@@ -173,7 +173,7 @@
               💾 Save to File
             </button>
           </div>
-          <textarea id="encrypt-result" class="result-area" placeholder="Encrypted mnemonic will be displayed here..."
+          <textarea id="encrypt-result" class="result-area" placeholder="Encrypted seed phrase will be displayed here..."
             readonly rows="4"></textarea>
         </div>
       </div>
@@ -182,7 +182,7 @@
       <div id="decrypt-tab" class="tab-content">
         <div class="input-section">
           <div class="result-header">
-            <label class="section-title">Encrypted Mnemonic Content</label>
+            <label class="section-title">Encrypted Seed Phrase Content</label>
             <div class="header-buttons">
               <button id="show-file-info-btn" class="secondary-button" disabled>
                 ℹ️ File Information
@@ -194,7 +194,7 @@
           </div>
           <div class="input-group">
             <textarea id="decrypt-content" class="text-area"
-              placeholder="Paste encrypted mnemonic content or load from file..." rows="4"></textarea>
+              placeholder="Paste encrypted seed phrase content or load from file..." rows="4"></textarea>
             <button class="keyboard-btn" data-target="decrypt-content">⌨️</button>
           </div>
         </div>
@@ -226,7 +226,7 @@
         <!-- Action Section -->
         <div class="action-section">
           <button id="decrypt-btn" class="primary-button" disabled>
-            🔓 Decrypt Mnemonic
+            🔓 Decrypt Seed Phrase
           </button>
           <div id="decrypt-progress" class="progress-indicator hidden"></div>
           <span id="decrypt-status" class="status-label">Ready to decrypt</span>
@@ -235,7 +235,7 @@
         <!-- Result Section -->
         <div class="result-section">
           <label class="section-title">Decryption Result</label>
-          <textarea id="decrypt-result" class="result-area" placeholder="Decrypted mnemonic will be displayed here..."
+          <textarea id="decrypt-result" class="result-area" placeholder="Decrypted seed phrase will be displayed here..."
             readonly rows="5"></textarea>
         </div>
       </div>

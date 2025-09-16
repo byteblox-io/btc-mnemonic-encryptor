@@ -1,10 +1,10 @@
-# BTC Mnemonic Encryptor
+# Seed Phrase Shield
 
-A secure, cross-platform Bitcoin mnemonic encryption tool built with Tauri, Rust, and TypeScript.
+A secure, cross-platform seed phrase encryption tool built with Tauri, Rust, and TypeScript.
 
 ## Features
 
-- 🔒 **AES-256-GCM Encryption**: Industry-standard encryption with authenticated encryption for Bitcoin mnemonics
+- 🔒 **AES-256-GCM Encryption**: Industry-standard encryption with authenticated encryption for seed phrases
 - 🎲 **EFF Diceware Passphrases**: Generate and validate secure passphrases using the EFF Large Wordlist
 - 🌐 **Network Isolation**: Automatic network monitoring with security warnings
 - 💾 **File Operations**: Save and load encrypted content with native file dialogs
@@ -25,7 +25,7 @@ A secure, cross-platform Bitcoin mnemonic encryption tool built with Tauri, Rust
 ### Basic Workflow
 
 1. **Generate Passphrase**: Click "🎲 Generate Secure Passphrase" for a random EFF Diceware passphrase
-2. **Enter Mnemonic**: Type or paste your Bitcoin mnemonic phrase
+2. **Enter Seed Phrase**: Type or paste your seed phrase
 3. **Set Credentials**: Enter your passphrase and personal password (both required for decryption)
 4. **Encrypt**: Click "🔒 Encrypt Content" to generate encrypted output
 5. **Save/Share**: Copy the encrypted text or save it to a file
@@ -34,7 +34,7 @@ A secure, cross-platform Bitcoin mnemonic encryption tool built with Tauri, Rust
 
 1. **Load Content**: Paste encrypted text or load from file
 2. **Enter Credentials**: Use the same passphrase and password from encryption
-3. **Decrypt**: Click "🔓 Decrypt Content" to recover original mnemonic
+3. **Decrypt**: Click "🔓 Decrypt Content" to recover original seed phrase
 
 ### Security Best Practices
 

@@ -1,5 +1,5 @@
-// BTC Mnemonic Encryptor - Enhanced with Auto-completion
-console.log('BTC Mnemonic Encryptor loaded');
+// Seed Phrase Shield - Enhanced with Auto-completion
+console.log('Seed Phrase Shield loaded');
 
 // Global variables
 let tauriAPI = {};
@@ -185,7 +185,7 @@ function preventMnemonicClipboardAccess(element) {
             if (e.key === 'c' || e.key === 'x' || e.key === 'a') {
                 if (clipboardSecuritySettings.neverAllow) {
                     e.preventDefault();
-                    showClipboardSecurityWarning('Copying mnemonics is disabled for security');
+                    showClipboardSecurityWarning('Copying seed phrases is disabled for security');
                     return;
                 }
                 
@@ -233,8 +233,8 @@ function showClipboardWarningDialog(content) {
                 <h3>⚠️ Clipboard Security Warning</h3>
             </div>
             <div class="modal-body">
-                <p><strong>You are about to copy sensitive mnemonic data to the clipboard.</strong></p>
-                <p>This action may expose your mnemonic to other applications that can access the clipboard.</p>
+                <p><strong>You are about to copy sensitive seed phrase data to the clipboard.</strong></p>
+                <p>This action may expose your seed phrase to other applications that can access the clipboard.</p>
                 <div class="security-options">
                     <label class="checkbox-label">
                         <input type="checkbox" id="auto-clear-clipboard"> 
@@ -393,15 +393,15 @@ function showPhysicalKeyboardWarning() {
                 <button class="close-btn" id="close-keyboard-warning">×</button>
             </div>
             <div class="modal-body">
-                <p><strong>You are using a physical keyboard to input mnemonic words.</strong></p>
-                <p>For maximum security, consider using the virtual keyboard to prevent potential keyloggers from capturing your mnemonic.</p>
+                <p><strong>You are using a physical keyboard to input seed phrase words.</strong></p>
+                <p>For maximum security, consider using the virtual keyboard to prevent potential keyloggers from capturing your seed phrase.</p>
                 <div class="security-reminder" style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 15px 0;">
                     <p><strong>Security Recommendations:</strong></p>
                     <ul style="margin: 10px 0; padding-left: 20px;">
                         <li>Ensure your computer is free from malware</li>
                         <li>Use the virtual keyboard (⌨️ button) for maximum security</li>
                         <li>Check for any suspicious software or hardware keyloggers</li>
-                        <li>Consider using an air-gapped computer for mnemonic operations</li>
+                        <li>Consider using an air-gapped computer for seed phrase operations</li>
                     </ul>
                 </div>
                 <div style="margin-top: 20px;">
@@ -458,7 +458,7 @@ function showPhysicalKeyboardWarning() {
         virtualKeyboardBtn.addEventListener('click', () => {
             closeModal();
             // Directly open the virtual keyboard for mnemonic input
-            console.log('Opening virtual keyboard for BTC mnemonic input');
+            console.log('Opening virtual keyboard for Seed Phrase input');
             setTimeout(() => {
                 openVirtualKeyboard('btc-mnemonic-input', false);
             }, 100); // Small delay to ensure modal is fully closed
@@ -1044,7 +1044,7 @@ async function performEncryption() {
             encryptBtn.textContent = '🔄 Encrypting...';
         }
         
-        setStatus('encrypt-status', 'Encrypting mnemonic...', 'info');
+        setStatus('encrypt-status', 'Encrypting seed phrase...', 'info');
         
         // Check if advanced crypto is enabled
         const isAdvanced = document.getElementById('enable-advanced-crypto')?.checked || false;
@@ -1089,7 +1089,7 @@ async function performEncryption() {
         }
         
         setStatus('encrypt-status', 'Encryption completed successfully', 'success');
-        showMessage('Mnemonic encrypted successfully!', 'success');
+        showMessage('Seed phrase encrypted successfully!', 'success');
         
         // Show post-encryption security reminder
         setTimeout(() => showPostEncryptionReminder(), 1000);
@@ -1103,7 +1103,7 @@ async function performEncryption() {
         const encryptBtn = document.getElementById('encrypt-btn');
         if (encryptBtn) {
             encryptBtn.disabled = false;
-            encryptBtn.textContent = '🔒 Encrypt Mnemonic';
+            encryptBtn.textContent = '🔒 Encrypt Seed Phrase';
         }
     }
 }
@@ -1184,7 +1184,7 @@ async function performDecryption() {
         const decryptBtn = document.getElementById('decrypt-btn');
         if (decryptBtn) {
             decryptBtn.disabled = false;
-            decryptBtn.textContent = '🔓 Decrypt Mnemonic';
+            decryptBtn.textContent = '🔓 Decrypt Seed Phrase';
         }
     }
 }
@@ -1806,7 +1806,7 @@ async function validateMnemonic() {
     // Show validation status
     statusDiv.classList.remove('hidden');
     if (statusIcon) statusIcon.textContent = '⏳';
-    if (statusMessage) statusMessage.textContent = 'Validating mnemonic...';
+    if (statusMessage) statusMessage.textContent = 'Validating seed phrase...';
     if (statusDetails) statusDetails.textContent = '';
     
     try {
@@ -1833,7 +1833,7 @@ async function validateMnemonic() {
         if (tauriAPI.invoke) {
             try {
                 const result = await tauriAPI.invoke('validate_btc_mnemonic', { mnemonic: mnemonic });
-                showMnemonicValidationResult(result.is_valid, result.message || 'Mnemonic validation completed');
+                showMnemonicValidationResult(result.is_valid, result.message || 'Seed phrase validation completed');
                 if (formatBtn) formatBtn.disabled = !result.is_valid;
             } catch (error) {
                 console.error('Backend validation failed:', error);
@@ -1862,7 +1862,7 @@ function showMnemonicValidationResult(isValid, message) {
     }
     
     if (statusMessage) {
-        statusMessage.textContent = isValid ? 'Valid BTC Mnemonic' : 'Invalid Mnemonic';
+        statusMessage.textContent = isValid ? 'Valid Seed Phrase' : 'Invalid Seed Phrase';
     }
     
     if (statusDetails) {
@@ -1890,7 +1890,7 @@ async function formatMnemonic() {
             try {
                 const result = await tauriAPI.invoke('format_mnemonic_comprehensive', { mnemonic: formatted });
                 formatted = result.formatted_mnemonic || formatted;
-                showMessage('Mnemonic formatted successfully', 'success');
+                showMessage('Seed phrase formatted successfully', 'success');
             } catch (error) {
                 console.error('Backend formatting failed:', error);
                 showMessage('Basic formatting applied', 'info');
@@ -2058,7 +2058,7 @@ function autoCopyMnemonic() {
     if (mnemonic && mnemonic.split(/\s+/).length >= 12) {
         // Auto-copy to main content if it looks like a complete mnemonic
         // This would typically copy to an "encrypt content" field if it existed
-        console.log('Complete mnemonic detected for auto-copy');
+        console.log('Complete seed phrase detected for auto-copy');
     }
 }
 
@@ -2244,7 +2244,7 @@ async function performEncryptionWithWalletLabel() {
             encryptBtn.textContent = '🔄 Encrypting with Label...';
         }
         
-        setStatus('encrypt-status', 'Encrypting mnemonic with wallet metadata...', 'info');
+        setStatus('encrypt-status', 'Encrypting seed phrase with wallet metadata...', 'info');
         
         // Create wallet metadata
         const walletMetadata = {
@@ -2326,7 +2326,7 @@ async function initializeSecurityReminders() {
     }
     
     // Show first-time guide if enabled and not shown before
-    const hasSeenGuide = localStorage.getItem('btc_mnemonic_guide_seen');
+    const hasSeenGuide = localStorage.getItem('seed_phrase_shield_guide_seen');
     if (securityConfig.showFirstTimeGuide && !hasSeenGuide) {
         setTimeout(() => showFirstTimeSecurityGuide(), 2000);
     }
@@ -2340,16 +2340,16 @@ function showFirstTimeSecurityGuide() {
     modal.innerHTML = `
         <div class="modal-content" style="max-width: 600px;">
             <div class="modal-header">
-                <h3>🛡️ BTC Mnemonic Security Guide</h3>
+                <h3>🛡️ Seed Phrase Shield Security Guide</h3>
                 <button id="close-security-guide" class="close-btn">×</button>
             </div>
             <div class="security-guide-content" style="padding: 25px;">
                 <div class="security-section">
                     <h4>⚠️ Critical Security Reminders</h4>
                     <ul style="line-height: 1.8; margin: 15px 0;">
-                        <li><strong>Network Isolation:</strong> Always disconnect from the internet when handling BTC mnemonics</li>
+                        <li><strong>Network Isolation:</strong> Always disconnect from the internet when handling Seed Phrases</li>
                         <li><strong>Private Environment:</strong> Ensure no one can see your screen or shoulder-surf</li>
-                        <li><strong>Secure Storage:</strong> Never store mnemonics in plain text files or cloud storage</li>
+                        <li><strong>Secure Storage:</strong> Never store seed phrase in plain text files or cloud storage</li>
                         <li><strong>Backup Verification:</strong> Always verify encrypted backups before deleting originals</li>
                         <li><strong>Clean Environment:</strong> Clear screen and memory after operations</li>
                     </ul>
@@ -2413,7 +2413,7 @@ function showPostEncryptionReminder(walletInfo = null) {
             <div class="reminder-content" style="padding: 20px;">
                 <div class="success-message" style="text-align: center; margin-bottom: 20px;">
                     <div style="font-size: 3em; margin-bottom: 10px;">🎉</div>
-                    <h4>Your BTC mnemonic has been encrypted successfully!</h4>
+                    <h4>Your Seed Phrase has been encrypted successfully!</h4>
                     ${walletText}
                 </div>
                 
@@ -2489,7 +2489,7 @@ function showPostDecryptionReminder() {
         <div style="padding: 15px;">
             <div style="text-align: center; margin-bottom: 15px; color: #e74c3c;">
                 <div style="font-size: 2em; margin-bottom: 8px;">⚠️</div>
-                <h4 style="margin: 0 0 5px 0; color: #e74c3c;">Your BTC mnemonic is now visible!</h4>
+                <h4 style="margin: 0 0 5px 0; color: #e74c3c;">Your Seed Phrase is now visible!</h4>
                 <p style="margin: 0; font-size: 14px; color: #666;">Take immediate security precautions</p>
             </div>
             
@@ -2498,7 +2498,7 @@ function showPostDecryptionReminder() {
                     <strong>👀 Screen Privacy:</strong> Ensure no one can see your screen
                 </div>
                 <div style="background: #d1ecf1; border-left: 4px solid #17a2b8; padding: 8px 12px; margin: 8px 0; font-size: 13px;">
-                    <strong>📝 Copy Safely:</strong> Copy mnemonic to secure storage only
+                    <strong>📝 Copy Safely:</strong> Copy seed phrase to secure storage only
                 </div>
                 <div style="background: #f8d7da; border-left: 4px solid #dc3545; padding: 8px 12px; margin: 8px 0; font-size: 13px;">
                     <strong>🧹 Clear After Use:</strong> Clear result field when done

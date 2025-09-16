@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "BTC Mnemonic Encryptor",
+  "productName": "Seed Phrase Shield",
   "version": "1.0.0",
-  "identifier": "com.pro.btc-mnemonic-encryptor",
+  "identifier": "com.pro.seed-phrase-shield",
   "build": {
     "frontendDist": "../src"
   },
@@ -10,7 +10,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "BTC Mnemonic Encryptor",
+        "title": "Seed Phrase Shield",
         "width": 900,
         "height": 750,
         "minWidth": 750,
@@ -34,8 +34,8 @@
       "icons/icon.ico"
     ],
     "category": "Utility",
-    "shortDescription": "Secure Bitcoin Mnemonic encryption tool",
-    "longDescription": "BTC Mnemonic Encryptor provides secure Bitcoin mnemonic encryption with EFF Diceware passphrase support and network isolation features."
+    "shortDescription": "Secure Seed Phrase encryption tool",
+    "longDescription": "Seed Phrase Encryptor provides secure seed phrase encryption with EFF Diceware passphrase support and network isolation features."
   },
   "plugins": {}
 }
