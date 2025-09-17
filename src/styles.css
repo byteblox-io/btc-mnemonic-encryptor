@@ -1,4 +1,4 @@
-/* BTC Mnemonic Encryptor - Original Style */
+/* Seed Phrase Shield - Original Style */
 * {
     margin: 0;
     padding: 0;
@@ -176,7 +176,7 @@ body {
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-.mnemonic-input {
+.seed-phrase-input {
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     font-size: 0.95rem;
     line-height: 1.6;
@@ -793,8 +793,8 @@ button {
     justify-content: space-around;
 }
 
-/* Mnemonic Suggestions */
-.mnemonic-suggestions {
+/* Seed Phrase Suggestions */
+.seed-phrase-suggestions {
     position: absolute;
     bottom: 100%;
     left: 0;
@@ -836,7 +836,7 @@ button {
     margin-bottom: 10px;
 }
 
-.keyboard-suggestions .mnemonic-suggestions {
+.keyboard-suggestions .seed-phrase-suggestions {
     position: relative;
     bottom: auto;
     left: auto;

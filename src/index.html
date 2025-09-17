@@ -39,33 +39,33 @@
 
       <!-- Encrypt Tab -->
       <div id="encrypt-tab" class="tab-content active">
-        <div class="input-section btc-mnemonic-section">
+        <div class="input-section seed-phrase-section">
           <div class="section-header">
             <label class="section-title">🔑 Seed Phrase Input</label>
             <div class="header-buttons">
-              <button id="format-mnemonic-btn" class="secondary-button" disabled>
+              <button id="format-seed-phrase-btn" class="secondary-button" disabled>
                 ✨ Format Seed Phrase
               </button>
             </div>
           </div>
           <p class="help-text">Please enter your seed phrase for encryption. Supports 12, 15, 18, 21, or 24 word BIP39 seed phrases.
             Virtual keyboard will automatically suggest matching seed phrase words.</p>
-          <div class="mnemonic-input-container">
+          <div class="seed-phrase-input-container">
             <div class="input-group">
-              <textarea id="btc-mnemonic-input" class="text-area mnemonic-input"
+              <textarea id="seed-phrase-input" class="text-area seed-phrase-input"
                 placeholder="Please enter your seed phrase (e.g., abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about)"
                 rows="3"></textarea>
-              <button class="keyboard-btn" data-target="btc-mnemonic-input">⌨️</button>
+              <button class="keyboard-btn" data-target="seed-phrase-input">⌨️</button>
             </div>
           </div>
 
-          <!-- Mnemonic Validation Status -->
-          <div id="mnemonic-validation-status" class="seed-phrase-status hidden">
+          <!-- Seed Phrase Validation Status -->
+          <div id="seed-phrase-validation-status" class="seed-phrase-status hidden">
             <div class="status-content">
-              <span id="mnemonic-status-icon" class="status-icon">⏳</span>
+              <span id="seed-phrase-status-icon" class="status-icon">⏳</span>
               <div class="status-text">
-                <span id="mnemonic-status-message" class="status-message">Validating seed phrase...</span>
-                <div id="mnemonic-status-details" class="status-details"></div>
+                <span id="seed-phrase-status-message" class="status-message">Validating seed phrase...</span>
+                <div id="seed-phrase-status-details" class="status-details"></div>
               </div>
             </div>
           </div>
@@ -250,9 +250,9 @@
         <button id="close-keyboard" class="close-btn">×</button>
       </div>
 
-      <!-- Mnemonic Suggestions (above keyboard display) -->
+      <!-- Seed Phrase Suggestions (above keyboard display) -->
       <div id="keyboard-suggestions" class="keyboard-suggestions">
-        <div id="mnemonic-suggestions" class="mnemonic-suggestions hidden"></div>
+        <div id="seed-phrase-suggestions" class="seed-phrase-suggestions hidden"></div>
       </div>
 
       <div class="keyboard-display">
@@ -334,7 +334,7 @@
     </div>
   </div>
 
-  <script src="main.js"></script>
+  <script type="module" src="main.js"></script>
   
   <style>
     /* Additional styles for new modals */
@@ -383,7 +383,7 @@
       color: white;
     }
     
-    .mnemonic-suggestions {
+    .seed-phrase-suggestions {
       border: 1px solid #e9ecef;
       border-radius: 6px;
       background: white;

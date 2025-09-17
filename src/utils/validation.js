@@ -1,24 +1,24 @@
 // Validation utilities for seed phrase security
 
 /**
- * Checks if an element is a mnemonic field based on ID or parent container
+ * Checks if an element is a seed phrase field based on ID or parent container
  * @param {HTMLElement} element - The DOM element to check
- * @returns {boolean} True if element is a mnemonic field
+ * @returns {boolean} True if element is a seed phrase field
  */
-export function isMnemonicField(element) {
+export function isSeedPhraseField(element) {
     if (!element) return false;
 
-    return element.id === 'btc-mnemonic-input' ||
-           element.closest('.mnemonic-input-container') !== null ||
-           (element.value && containsMnemonicWords(element.value));
+    return element.id === 'btc-seed-phrase-input' ||
+           element.closest('.seed-phrase-input-container') !== null ||
+           (element.value && containsSeedPhraseWords(element.value));
 }
 
 /**
- * Determines if text contains BIP39 mnemonic words
+ * Determines if text contains BIP39 seed phrase words
  * @param {string} text - Text to analyze
- * @returns {boolean} True if text contains likely mnemonic words
+ * @returns {boolean} True if text contains likely seed phrase words
  */
-export function containsMnemonicWords(text) {
+export function containsSeedPhraseWords(text) {
     if (!text || text.length < 10) return false;
 
     const words = text.toLowerCase().split(/\s+/);
@@ -26,19 +26,19 @@ export function containsMnemonicWords(text) {
 
     // Import BIP39 word list (must be imported in main module)
     // This function assumes bip39Words is available in scope
-    const mnemonicWords = words.filter(word => window.bip39Words?.includes(word));
-    return mnemonicWords.length >= Math.min(6, words.length * 0.7);
+    const seedPhraseWords = words.filter(word => window.bip39Words?.includes(word));
+    return seedPhraseWords.length >= Math.min(6, words.length * 0.7);
 }
 
 /**
- * Validates that a mnemonic string follows BIP39 standards
- * @param {string} mnemonic - The mnemonic string to validate
+ * Validates that a seed phrase string follows BIP39 standards
+ * @param {string} seedPhrase - The seed phrase string to validate
  * @returns {{isValid: boolean, message: string}} Validation result
  */
-export function validateMnemonicStructure(mnemonic) {
-    if (!mnemonic) return { isValid: false, message: 'No mnemonic provided' };
+export function validateSeedPhraseStructure(seedPhrase) {
+    if (!seedPhrase) return { isValid: false, message: 'No seed phrase provided' };
 
-    const words = mnemonic.split(/\s+/).filter(word => word.length > 0);
+    const words = seedPhrase.split(/\s+/).filter(word => word.length > 0);
     const wordCount = words.length;
 
     // Check valid word count (12, 15, 18, 21, or 24)
@@ -62,14 +62,14 @@ export function validateMnemonicStructure(mnemonic) {
 }
 
 /**
- * Formats a mnemonic string by normalizing whitespace and case
- * @param {string} mnemonic - The mnemonic string to format
- * @returns {string} Formatted mnemonic
+ * Formats a seed phrase string by normalizing whitespace and case
+ * @param {string} seedPhrase - The seed phrase string to format
+ * @returns {string} Formatted seed phrase
  */
-export function formatMnemonic(mnemonic) {
-    if (!mnemonic) return '';
+export function formatSeedPhrase(seedPhrase) {
+    if (!seedPhrase) return '';
 
-    return mnemonic
+    return seedPhrase
         .toLowerCase()
         .replace(/[\W_]+/g, ' ') // Remove non-word characters except spaces
         .replace(/\s+/g, ' ') // Replace multiple spaces with single space
@@ -83,9 +83,9 @@ export function formatMnemonic(mnemonic) {
  * @param {string} message - Validation message to display
  */
 export function updateValidationStatus(statusId, isValid, message) {
-    const statusIcon = document.getElementById('mnemonic-status-icon');
-    const statusMessage = document.getElementById('mnemonic-status-message');
-    const statusDetails = document.getElementById('mnemonic-status-details');
+    const statusIcon = document.getElementById('seed-phrase-status-icon');
+    const statusMessage = document.getElementById('seed-phrase-status-message');
+    const statusDetails = document.getElementById('seed-phrase-status-details');
 
     if (statusIcon) {
         statusIcon.textContent = isValid ? '✅' : '❌';
@@ -101,13 +101,27 @@ export function updateValidationStatus(statusId, isValid, message) {
 }
 
 /**
- * Performs comprehensive mnemonic validation
- * @param {string} mnemonic - The mnemonic string to validate
- * @returns {Promise<{isValid: boolean, message: string}>} Validation result
+ * Simple validation wrapper for seed phrase input
+ * @param {string} seedPhrase - The seed phrase string to validate
+ * @returns {void}
  */
-export async function validateMnemonicComprehensive(mnemonic) {
+export function validateSeedPhrase() {
+    const element = document.getElementById('seed-phrase-input');
+    if (!element) return;
+
+    const seedPhrase = element.value.trim();
+    if (!seedPhrase) {
+        updateValidationStatus('seed-phrase-input', false, 'Please enter a seed phrase');
+        return;
+    }
+
+    const result = validateSeedPhraseStructure(seedPhrase);
+    updateValidationStatus('seed-phrase-input', result.isValid, result.message);
+}
+
+export async function validateSeedPhraseComprehensive(seedPhrase) {
     // First do basic structural validation
-    const structureResult = validateMnemonicStructure(mnemonic);
+    const structureResult = validateSeedPhraseStructure(seedPhrase);
 
     if (!structureResult.isValid) {
         return structureResult;
@@ -116,7 +130,7 @@ export async function validateMnemonicComprehensive(mnemonic) {
     // If Tauri API is available, use backend validation
     if (window.tauriAPI?.invoke) {
         try {
-            const result = await window.tauriAPI.invoke('validate_btc_mnemonic', { mnemonic });
+            const result = await window.tauriAPI.invoke('validate_seed_phrase', { seedPhrase });
             return {
                 isValid: result.is_valid,
                 message: result.message || structureResult.message

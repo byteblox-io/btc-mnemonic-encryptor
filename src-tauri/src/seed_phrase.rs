@@ -4,7 +4,7 @@ use std::str::FromStr;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum MnemonicError {
+pub enum SeedPhraseError {
     #[error("Invalid word count: expected 12, 15, 18, 21, or 24 words, got {0}")]
     InvalidWordCount(usize),
     
@@ -14,14 +14,14 @@ pub enum MnemonicError {
     #[error("Checksum validation failed")]
     InvalidChecksum,
     
-    #[error("Empty mnemonic provided")]
-    EmptyMnemonic,
+    #[error("Empty seed phrase provided")]
+    EmptySeedPhrase,
     
     #[error("BIP39 validation error: {0}")]
     Bip39Error(String),
 }
 
-impl Serialize for MnemonicError {
+impl Serialize for SeedPhraseError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -31,7 +31,7 @@ impl Serialize for MnemonicError {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct MnemonicValidationResult {
+pub struct SeedPhraseValidationResult {
     pub is_valid: bool,
     pub word_count: usize,
     pub invalid_words: Vec<String>,
@@ -50,10 +50,10 @@ impl SeedPhraseValidator {
         }
     }
 
-    /// Validates a BIP39 mnemonic phrase
-    pub fn validate_mnemonic(&self, mnemonic_str: &str) -> MnemonicValidationResult {
-        if mnemonic_str.trim().is_empty() {
-            return MnemonicValidationResult {
+    /// Validates a BIP39 seed phrase
+    pub fn validate_seed_phrase(&self, seed_phrase_str: &str) -> SeedPhraseValidationResult {
+        if seed_phrase_str.trim().is_empty() {
+            return SeedPhraseValidationResult {
                 is_valid: false,
                 word_count: 0,
                 invalid_words: vec![],
@@ -62,12 +62,12 @@ impl SeedPhraseValidator {
             };
         }
 
-        let words: Vec<&str> = mnemonic_str.trim().split_whitespace().collect();
+        let words: Vec<&str> = seed_phrase_str.trim().split_whitespace().collect();
         let word_count = words.len();
 
         // Check word count (BIP39 supports 12, 15, 18, 21, 24 words)
         if !self.validate_word_count(word_count) {
-            return MnemonicValidationResult {
+            return SeedPhraseValidationResult {
                 is_valid: false,
                 word_count,
                 invalid_words: vec![],
@@ -79,7 +79,7 @@ impl SeedPhraseValidator {
         // Check for invalid words
         let invalid_words = self.find_invalid_words(&words);
         if !invalid_words.is_empty() {
-            return MnemonicValidationResult {
+            return SeedPhraseValidationResult {
                 is_valid: false,
                 word_count,
                 invalid_words: invalid_words.clone(),
@@ -89,15 +89,15 @@ impl SeedPhraseValidator {
         }
 
         // Validate checksum using bip39 crate
-        match Mnemonic::from_str(mnemonic_str) {
-            Ok(_) => MnemonicValidationResult {
+        match Mnemonic::from_str(seed_phrase_str) {
+            Ok(_) => SeedPhraseValidationResult {
                 is_valid: true,
                 word_count,
                 invalid_words: vec![],
                 errors: vec![],
                 checksum_valid: true,
             },
-            Err(e) => MnemonicValidationResult {
+            Err(e) => SeedPhraseValidationResult {
                 is_valid: false,
                 word_count,
                 invalid_words: vec![],
@@ -107,12 +107,12 @@ impl SeedPhraseValidator {
         }
     }
 
-    /// Validates the word count for BIP39 mnemonic
+    /// Validates the word count for BIP39 seed phrase
     pub fn validate_word_count(&self, word_count: usize) -> bool {
         matches!(word_count, 12 | 15 | 18 | 21 | 24)
     }
 
-    /// Finds invalid words in the mnemonic
+    /// Finds invalid words in the seed phrase
     fn find_invalid_words(&self, words: &[&str]) -> Vec<String> {
         let wordlist = self.language.word_list();
         words
@@ -123,8 +123,8 @@ impl SeedPhraseValidator {
     }
 
     /// Checks if the checksum is valid
-    pub fn check_checksum(&self, mnemonic_str: &str) -> bool {
-        Mnemonic::from_str(mnemonic_str).is_ok()
+    pub fn check_checksum(&self, seed_phrase_str: &str) -> bool {
+        Mnemonic::from_str(seed_phrase_str).is_ok()
     }
 }
 
@@ -137,11 +137,11 @@ pub struct SeedPhraseFormatResult {
     pub is_valid_format: bool,
 }
 
-pub struct MnemonicFormatter;
+pub struct SeedPhraseFormatter;
 
-impl MnemonicFormatter {
-    /// Comprehensive mnemonic input cleaning and formatting
-    pub fn format_mnemonic_comprehensive(raw_input: &str) -> SeedPhraseFormatResult {
+impl SeedPhraseFormatter {
+    /// Comprehensive seed phrase input cleaning and formatting
+    pub fn format_seed_phrase_comprehensive(raw_input: &str) -> SeedPhraseFormatResult {
         let mut changes_made = Vec::new();
         let original_words: Vec<&str> = raw_input.split_whitespace().collect();
         let original_word_count = original_words.len();
@@ -192,7 +192,7 @@ impl MnemonicFormatter {
         }
     }
 
-    /// Cleans and normalizes mnemonic input - removes extra spaces, newlines, tabs
+    /// Cleans and normalizes seed phrase input - removes extra spaces, newlines, tabs
     pub fn clean_input(raw_input: &str) -> String {
         raw_input
             .trim()
@@ -219,18 +219,18 @@ impl MnemonicFormatter {
             .join(" ")
     }
 
-    /// Ensures the mnemonic follows standard 12-word format
+    /// Ensures the seed phrase follows standard format
     pub fn ensure_standard_format(input: &str) -> String {
         let words: Vec<&str> = input.split_whitespace().collect();
         
-        // For BTC, we primarily focus on 12-word mnemonics
+        // For seed phrases, we support multiple word counts (12, 15, 18, 21, 24)
         // If we have exactly 12 words, return as-is
         // If we have 24 words, keep all 24
         // If we have other counts, return as-is but mark as potentially invalid
         words.join(" ")
     }
 
-    /// Normalizes spacing in mnemonic
+    /// Normalizes spacing in seed phrase
     pub fn normalize_spacing(input: &str) -> String {
         input
             .split_whitespace()
@@ -238,7 +238,7 @@ impl MnemonicFormatter {
             .join(" ")
     }
 
-    /// Validates the format of a formatted mnemonic
+    /// Validates the format of a formatted seed phrase
     pub fn validate_format(formatted: &str) -> bool {
         let words: Vec<&str> = formatted.split_whitespace().collect();
         let word_count = words.len();
@@ -256,19 +256,19 @@ impl MnemonicFormatter {
     }
 
     /// Validates and confirms formatting result
-    pub fn validate_and_confirm_format(result: &SeedPhraseFormatResult) -> Result<(), MnemonicError> {
+    pub fn validate_and_confirm_format(result: &SeedPhraseFormatResult) -> Result<(), SeedPhraseError> {
         if !result.is_valid_format {
-            return Err(MnemonicError::InvalidWordCount(result.formatted_word_count));
+            return Err(SeedPhraseError::InvalidWordCount(result.formatted_word_count));
         }
 
         if result.formatted_seed_phrase.trim().is_empty() {
-            return Err(MnemonicError::EmptyMnemonic);
+            return Err(SeedPhraseError::EmptySeedPhrase);
         }
 
         // Additional validation: check if word count is supported
         let valid_counts = [12, 15, 18, 21, 24];
         if !valid_counts.contains(&result.formatted_word_count) {
-            return Err(MnemonicError::InvalidWordCount(result.formatted_word_count));
+            return Err(SeedPhraseError::InvalidWordCount(result.formatted_word_count));
         }
 
         Ok(())
@@ -281,7 +281,7 @@ mod tests {
 
     #[test]
     fn test_valid_12_word_seed_phrase() {
-        let validator = MnemonicValidator::new();
+        let validator = SeedPhraseValidator::new();
         let seed_phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
         let result = validator.validate_seed_phrase(seed_phrase);
         assert!(result.is_valid);
@@ -293,7 +293,7 @@ mod tests {
 
     #[test]
     fn test_valid_24_word_seed_phrase() {
-        let validator = MnemonicValidator::new();
+        let validator = SeedPhraseValidator::new();
         let seed_phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art";
         let result = validator.validate_seed_phrase(seed_phrase);
         assert!(result.is_valid);
@@ -303,7 +303,7 @@ mod tests {
 
     #[test]
     fn test_invalid_word_count_too_few_seed_phrase() {
-        let validator = MnemonicValidator::new();
+        let validator = SeedPhraseValidator::new();
         let seed_phrase = "abandon abandon abandon";
         let result = validator.validate_seed_phrase(seed_phrase);
         assert!(!result.is_valid);
@@ -314,7 +314,7 @@ mod tests {
 
     #[test]
     fn test_invalid_word_count_unsupported_seed_phrase() {
-        let validator = MnemonicValidator::new();
+        let validator = SeedPhraseValidator::new();
         let seed_phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon"; // 11 words
         let result = validator.validate_seed_phrase(seed_phrase);
         assert!(!result.is_valid);
@@ -324,7 +324,7 @@ mod tests {
 
     #[test]
     fn test_invalid_words_seed_phrase() {
-        let validator = MnemonicValidator::new();
+        let validator = SeedPhraseValidator::new();
         let seed_phrase = "invalidword notaword xyz123 abandon abandon abandon abandon abandon abandon abandon abandon about";
         let result = validator.validate_seed_phrase(seed_phrase);
         assert!(!result.is_valid);
@@ -336,7 +336,7 @@ mod tests {
 
     #[test]
     fn test_empty_seed_phrase() {
-        let validator = MnemonicValidator::new();
+        let validator = SeedPhraseValidator::new();
         let result = validator.validate_seed_phrase("");
         assert!(!result.is_valid);
         assert_eq!(result.word_count, 0);
@@ -345,8 +345,8 @@ mod tests {
 
     #[test]
     fn test_whitespace_only_seed_phrase() {
-        let validator = MnemonicValidator::new();
-        let result = validator.validate_seed_phrase("   \n\t  ");
+        let validator = SeedPhraseValidator::new();
+        let result = validator.validate_mnemonic("   \n\t  ");
         assert!(!result.is_valid);
         assert_eq!(result.word_count, 0);
         assert!(result.errors.contains(&"Empty seed phrase provided".to_string()));
@@ -354,7 +354,7 @@ mod tests {
 
     #[test]
     fn test_invalid_checksum_seed_phrase() {
-        let validator = MnemonicValidator::new();
+        let validator = SeedPhraseValidator::new();
         // This is a 12-word seed phrase with valid words but invalid checksum
         let seed_phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon";
         let result = validator.validate_seed_phrase(seed_phrase);
@@ -367,7 +367,7 @@ mod tests {
 
     #[test]
     fn test_case_insensitive_validation_seed_phrase() {
-        let validator = MnemonicValidator::new();
+        let validator = SeedPhraseValidator::new();
         let seed_phrase = "ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABANDON ABOUT";
         let result = validator.validate_seed_phrase(seed_phrase);
         // Note: BIP39 is case-sensitive, so this should fail
@@ -376,7 +376,7 @@ mod tests {
 
     #[test]
     fn test_word_count_validation_seed_phrase() {
-        let validator = MnemonicValidator::new();
+        let validator = SeedPhraseValidator::new();
         assert!(validator.validate_word_count(12));
         assert!(validator.validate_word_count(15));
         assert!(validator.validate_word_count(18));
@@ -389,7 +389,7 @@ mod tests {
 
     #[test]
     fn test_checksum_validation_seed_phrase() {
-        let validator = MnemonicValidator::new();
+        let validator = SeedPhraseValidator::new();
         let valid_seed_phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
         let invalid_seed_phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon";
 
@@ -414,7 +414,7 @@ mod tests {
     #[test]
     fn test_formatting_mixed_case() {
         let raw = "Abandon ABANDON abandon Abandon abandon abandon abandon abandon abandon abandon abandon about";
-        let formatted = MnemonicFormatter::clean_input(raw);
+        let formatted = SeedPhraseFormatter::clean_input(raw);
         // The clean_input function now converts to lowercase
         assert_eq!(formatted, "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about");
     }
@@ -437,7 +437,7 @@ mod tests {
 
     #[test]
     fn test_comprehensive_validation_flow() {
-        let validator = MnemonicValidator::new();
+        let validator = SeedPhraseValidator::new();
         
         // Test complete flow: messy input -> format -> validate
         let messy_input = "  abandon   abandon  abandon abandon abandon abandon abandon abandon abandon abandon abandon about  ";
@@ -454,7 +454,7 @@ mod tests {
     #[test]
     fn test_comprehensive_formatting_clean_input() {
         let messy_input = "  abandon   abandon\nabandon\tabandon abandon abandon abandon abandon abandon abandon abandon about  ";
-        let result = MnemonicFormatter::format_mnemonic_comprehensive(messy_input);
+        let result = SeedPhraseFormatter::format_seed_phrase_comprehensive(messy_input);
         
         assert_eq!(result.formatted_seed_phrase, "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about");
         assert_eq!(result.original_word_count, 12);
@@ -466,7 +466,7 @@ mod tests {
     #[test]
     fn test_comprehensive_formatting_case_normalization() {
         let mixed_case_input = "Abandon ABANDON abandon Abandon abandon abandon abandon abandon abandon abandon abandon about";
-        let result = MnemonicFormatter::format_mnemonic_comprehensive(mixed_case_input);
+        let result = SeedPhraseFormatter::format_seed_phrase_comprehensive(mixed_case_input);
         
         assert_eq!(result.formatted_seed_phrase, "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about");
         assert_eq!(result.original_word_count, 12);
@@ -478,7 +478,7 @@ mod tests {
     #[test]
     fn test_comprehensive_formatting_sanitization() {
         let dirty_input = "abandon123 abandon! abandon@ abandon abandon abandon abandon abandon abandon abandon abandon about";
-        let result = MnemonicFormatter::format_mnemonic_comprehensive(dirty_input);
+        let result = SeedPhraseFormatter::format_seed_phrase_comprehensive(dirty_input);
         
         assert_eq!(result.formatted_seed_phrase, "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about");
         assert_eq!(result.original_word_count, 12);
@@ -490,7 +490,7 @@ mod tests {
     #[test]
     fn test_comprehensive_formatting_word_count_change() {
         let short_input = "abandon abandon abandon";
-        let result = MnemonicFormatter::format_mnemonic_comprehensive(short_input);
+        let result = SeedPhraseFormatter::format_seed_phrase_comprehensive(short_input);
         
         assert_eq!(result.formatted_seed_phrase, "abandon abandon abandon");
         assert_eq!(result.original_word_count, 3);
@@ -502,7 +502,7 @@ mod tests {
     #[test]
     fn test_comprehensive_formatting_empty_input() {
         let empty_input = "   \n\t  ";
-        let result = MnemonicFormatter::format_mnemonic_comprehensive(empty_input);
+        let result = SeedPhraseFormatter::format_seed_phrase_comprehensive(empty_input);
         
         assert_eq!(result.formatted_seed_phrase, "");
         assert_eq!(result.original_word_count, 0);
@@ -511,9 +511,9 @@ mod tests {
     }
 
     #[test]
-    fn test_comprehensive_formatting_24_word_mnemonic() {
+    fn test_comprehensive_formatting_24_word_seed_phrase() {
         let input_24 = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art";
-        let result = MnemonicFormatter::format_mnemonic_comprehensive(input_24);
+        let result = SeedPhraseFormatter::format_seed_phrase_comprehensive(input_24);
         
         assert_eq!(result.original_word_count, 24);
         assert_eq!(result.formatted_word_count, 24);
@@ -575,7 +575,7 @@ mod tests {
 
     #[test]
     fn test_validate_and_confirm_format_success() {
-        let valid_result = MnemonicFormatResult {
+        let valid_result = SeedPhraseFormatResult {
             formatted_seed_phrase: "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about".to_string(),
             original_word_count: 12,
             formatted_word_count: 12,
@@ -588,7 +588,7 @@ mod tests {
 
     #[test]
     fn test_validate_and_confirm_format_invalid_count() {
-        let invalid_result = MnemonicFormatResult {
+        let invalid_result = SeedPhraseFormatResult {
             formatted_seed_phrase: "abandon abandon abandon".to_string(),
             original_word_count: 3,
             formatted_word_count: 3,
@@ -603,7 +603,7 @@ mod tests {
 
     #[test]
     fn test_validate_and_confirm_format_empty() {
-        let empty_result = MnemonicFormatResult {
+        let empty_result = SeedPhraseFormatResult {
             formatted_seed_phrase: "".to_string(),
             original_word_count: 0,
             formatted_word_count: 0,
@@ -620,7 +620,7 @@ mod tests {
     #[test]
     fn test_comprehensive_formatting_complex_scenario() {
         let complex_input = "  Abandon123   ABANDON!  \n abandon@  abandon abandon abandon abandon abandon abandon abandon abandon about  ";
-        let result = MnemonicFormatter::format_mnemonic_comprehensive(complex_input);
+        let result = SeedPhraseFormatter::format_seed_phrase_comprehensive(complex_input);
         
         assert_eq!(result.formatted_seed_phrase, "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about");
         assert_eq!(result.original_word_count, 12);

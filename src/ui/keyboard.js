@@ -25,14 +25,14 @@ export function init() {
         virtualKeyboard.currentWord = '';
         virtualKeyboard.suggestions = [];
 
-        // Check if this is a mnemonic input field
-        const isMnemonicField = targetInputId === 'btc-mnemonic-input';
+        // Check if this is a seed phrase input field
+        const isSeedPhraseField = targetInputId === 'seed-phrase-input';
 
         showVirtualKeyboard();
         updateKeyboardDisplay();
 
-        if (isMnemonicField) {
-            updateMnemonicSuggestions();
+        if (isSeedPhraseField) {
+            updateSeedPhraseSuggestions();
         }
     }
 
@@ -52,7 +52,7 @@ export function init() {
             modal.classList.add('hidden');
         }
 
-        hideMnemonicSuggestions();
+        hideSeedPhraseSuggestions();
     }
 
     function confirmKeyboardInput() {
@@ -111,11 +111,11 @@ export function init() {
 
         updateKeyboardDisplay();
 
-        // Update mnemonic suggestions if this is a mnemonic field
-        const isMnemonicField = virtualKeyboard.targetInput &&
-                               virtualKeyboard.targetInput.id === 'btc-mnemonic-input';
-        if (isMnemonicField) {
-            updateMnemonicSuggestions();
+        // Update seed phrase suggestions if this is a seed phrase field
+        const isSeedPhraseField = virtualKeyboard.targetInput &&
+                               virtualKeyboard.targetInput.id === 'seed-phrase-input';
+        if (isSeedPhraseField) {
+            updateSeedPhraseSuggestions();
         }
     }
 
@@ -124,10 +124,10 @@ export function init() {
         virtualKeyboard.currentWord = words[words.length - 1] || '';
     }
 
-    function updateMnemonicSuggestions() {
+    function updateSeedPhraseSuggestions() {
         // Only show suggestions if we have a current word and it's at least 1 character
         if (!virtualKeyboard.currentWord || virtualKeyboard.currentWord.length < 1) {
-            hideMnemonicSuggestions();
+            hideSeedPhraseSuggestions();
             return;
         }
 
@@ -139,14 +139,14 @@ export function init() {
         virtualKeyboard.suggestions = suggestions;
 
         if (suggestions.length > 0) {
-            showMnemonicSuggestions(suggestions);
+            showSeedPhraseSuggestions(suggestions);
         } else {
-            hideMnemonicSuggestions();
+            hideSeedPhraseSuggestions();
         }
     }
 
-    function showMnemonicSuggestions(suggestions) {
-        const suggestionsContainer = document.getElementById('mnemonic-suggestions');
+    function showSeedPhraseSuggestions(suggestions) {
+        const suggestionsContainer = document.getElementById('seed-phrase-suggestions');
         if (!suggestionsContainer) return;
 
         suggestionsContainer.innerHTML = '';
@@ -163,7 +163,7 @@ export function init() {
             item.className = 'suggestion-item';
             item.textContent = word;
             item.dataset.index = index;
-            item.addEventListener('click', () => selectMnemonicSuggestion(word));
+            item.addEventListener('click', () => selectSeedPhraseSuggestion(word));
             suggestionsContainer.appendChild(item);
         });
 
@@ -171,15 +171,15 @@ export function init() {
         virtualKeyboard.suggestionIndex = -1; // Reset selection
     }
 
-    function hideMnemonicSuggestions() {
-        const suggestionsContainer = document.getElementById('mnemonic-suggestions');
+    function hideSeedPhraseSuggestions() {
+        const suggestionsContainer = document.getElementById('seed-phrase-suggestions');
         if (suggestionsContainer) {
             suggestionsContainer.classList.add('hidden');
             suggestionsContainer.innerHTML = '';
         }
     }
 
-    function selectMnemonicSuggestion(word) {
+    function selectSeedPhraseSuggestion(word) {
         if (!virtualKeyboard.isOpen || !virtualKeyboard.currentWord) return;
 
         // Replace the current word with the selected suggestion and add a space
@@ -189,7 +189,7 @@ export function init() {
         virtualKeyboard.currentWord = ''; // Reset current word
 
         updateKeyboardDisplay();
-        hideMnemonicSuggestions();
+        hideSeedPhraseSuggestions();
     }
 
     function updateSuggestionSelection(suggestionItems) {
@@ -242,57 +242,60 @@ export function init() {
         }
     }
 
-    // Initialize event listeners for virtual keyboard
-    document.querySelectorAll('.keyboard-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const targetId = this.dataset.target;
-            const isPassword = this.dataset.password === 'true';
-            openVirtualKeyboard(targetId, isPassword);
+    // Defer event listener setup until DOM is fully loaded
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize event listeners for virtual keyboard
+        document.querySelectorAll('.keyboard-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const targetId = this.dataset.target;
+                const isPassword = this.dataset.password === 'true';
+                openVirtualKeyboard(targetId, isPassword);
+            });
         });
+
+        // Virtual keyboard modal events
+        const closeKeyboard = document.getElementById('close-keyboard');
+        const keyboardCancel = document.getElementById('keyboard-cancel');
+        const keyboardOk = document.getElementById('keyboard-ok');
+
+        if (closeKeyboard) {
+            closeKeyboard.addEventListener('click', closeVirtualKeyboard);
+        }
+        if (keyboardCancel) {
+            keyboardCancel.addEventListener('click', closeVirtualKeyboard);
+        }
+        if (keyboardOk) {
+            keyboardOk.addEventListener('click', confirmKeyboardInput);
+        }
+
+        // Virtual keyboard key events
+        document.querySelectorAll('.key-btn').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                handleKeyboardInput(button.dataset.key, button.dataset.shift);
+            });
+        });
+
+        // Close modal when clicking outside
+        const modal = document.getElementById('virtual-keyboard-modal');
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    closeVirtualKeyboard();
+                }
+            });
+        }
     });
 
-    // Virtual keyboard modal events
-    const closeKeyboard = document.getElementById('close-keyboard');
-    const keyboardCancel = document.getElementById('keyboard-cancel');
-    const keyboardOk = document.getElementById('keyboard-ok');
-
-    if (closeKeyboard) {
-        closeKeyboard.addEventListener('click', closeVirtualKeyboard);
-    }
-    if (keyboardCancel) {
-        keyboardCancel.addEventListener('click', closeVirtualKeyboard);
-    }
-    if (keyboardOk) {
-        keyboardOk.addEventListener('click', confirmKeyboardInput);
-    }
-
-    // Virtual keyboard key events
-    document.querySelectorAll('.key-btn').forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            handleKeyboardInput(button.dataset.key, button.dataset.shift);
-        });
-    });
-
-    // Close modal when clicking outside
-    const modal = document.getElementById('virtual-keyboard-modal');
-    if (modal) {
-        modal.addEventListener('click', function(e) {
-            if (e.target === modal) {
-                closeVirtualKeyboard();
-            }
-        });
-    }
-
-    // Setup global keyboard events for mnemonic suggestions
+    // Setup global keyboard events for seed phrase suggestions
     document.addEventListener('keydown', function(event) {
-        // Only handle keyboard events when virtual keyboard is open and target is mnemonic field
+        // Only handle keyboard events when virtual keyboard is open and target is seed phrase field
         if (!virtualKeyboard.isOpen || !virtualKeyboard.targetInput ||
-            virtualKeyboard.targetInput.id !== 'btc-mnemonic-input') {
+            virtualKeyboard.targetInput.id !== 'seed-phrase-input') {
             return;
         }
 
-        const suggestionsContainer = document.getElementById('mnemonic-suggestions');
+        const suggestionsContainer = document.getElementById('seed-phrase-suggestions');
         if (!suggestionsContainer || suggestionsContainer.classList.contains('hidden')) {
             return;
         }
@@ -325,13 +328,13 @@ export function init() {
                 if (virtualKeyboard.suggestionIndex >= 0 &&
                     virtualKeyboard.suggestionIndex < suggestionItems.length) {
                     const selectedWord = suggestionItems[virtualKeyboard.suggestionIndex].textContent;
-                    selectMnemonicSuggestion(selectedWord);
+                    selectSeedPhraseSuggestion(selectedWord);
                 }
                 break;
 
             case 'Escape':
                 event.preventDefault();
-                hideMnemonicSuggestions();
+                hideSeedPhraseSuggestions();
                 break;
         }
     });

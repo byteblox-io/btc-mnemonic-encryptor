@@ -8,13 +8,13 @@ use aes_gcm::{KeyInit, aead::Aead};
 
 pub mod crypto;
 pub mod diceware;
-pub mod mnemonic;
+pub mod seed_phrase;
 pub mod network;
 pub mod bip39_wordlist;
 
 use crypto::*;
 use diceware::*;
-use mnemonic::*;
+use seed_phrase::*;
 use network::*;
 use bip39_wordlist::*;
 
@@ -30,8 +30,8 @@ pub enum AppError {
     FileError(String),
     #[error("Network security violation: {0}")]
     NetworkError(String),
-    #[error("Mnemonic validation failed: {0}")]
-    MnemonicError(String),
+    #[error("Seed phrase validation failed: {0}")]
+    SeedPhraseError(String),
     #[error("Crypto operation failed: {0}")]
     CryptoError(#[from] crypto::CryptoError),
 }
@@ -95,10 +95,10 @@ impl WalletType {
 
     pub fn from_string(s: &str) -> Self {
         match s {
-            "Main Wallet" | "主钱包" => WalletType::MainWallet,
-            "Cold Wallet" | "冷钱包" => WalletType::ColdWallet,
-            "Hot Wallet" | "热钱包" => WalletType::HotWallet,
-            "Test Wallet" | "测试钱包" => WalletType::TestWallet,
+            "Main Wallet" => WalletType::MainWallet,
+            "Cold Wallet" => WalletType::ColdWallet,
+            "Hot Wallet" => WalletType::HotWallet,
+            "Test Wallet" => WalletType::TestWallet,
             _ => WalletType::Custom(s.to_string()),
         }
     }
@@ -109,7 +109,7 @@ pub struct WalletMetadata {
     pub label: String,
     pub wallet_type: WalletType,
     pub created_at: DateTime<Utc>,
-    pub mnemonic_word_count: Option<usize>,
+    pub seed_phrase_word_count: Option<usize>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -118,7 +118,7 @@ pub struct WalletInfo {
     pub wallet_type: WalletType,
     pub created_at: DateTime<Utc>,
     pub file_path: Option<String>,
-    pub mnemonic_word_count: Option<usize>,
+    pub seed_phrase_word_count: Option<usize>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -183,20 +183,20 @@ pub struct AppState {
 }
 
 #[tauri::command]
-async fn encrypt_mnemonic(
-    mnemonic: String,
+async fn encrypt_seed_phrase(
+    seed_phrase: String,
     passphrase: String,
     password: Option<String>, // Make password optional
     state: State<'_, AppState>,
 ) -> Result<String, AppError> {
 
-    // Validate mnemonic first
+    // Validate seed phrase first
     let validator = SeedPhraseValidator::new();
-    let mnemonic_validation = validator.validate_mnemonic(&mnemonic);
-    if !mnemonic_validation.is_valid {
-        return Err(AppError::MnemonicError(format!(
-            "Mnemonic validation failed: {}",
-            mnemonic_validation.errors.join(", ")
+    let seed_phrase_validation = validator.validate_seed_phrase(&seed_phrase);
+    if !seed_phrase_validation.is_valid {
+        return Err(AppError::SeedPhraseError(format!(
+            "Seed phrase validation failed: {}",
+            seed_phrase_validation.errors.join(", ")
         )));
     }
 
@@ -213,7 +213,7 @@ async fn encrypt_mnemonic(
     let password = password.unwrap_or_default();
 
     // Perform encryption
-    encrypt_data(&mnemonic, &passphrase, &password)
+    encrypt_data(&seed_phrase, &passphrase, &password)
         .map_err(|e| AppError::EncryptionError(e.to_string()))
 }
 
@@ -281,19 +281,19 @@ async fn save_to_file(_content: String, _filename: String) -> Result<(), AppErro
 }
 
 #[tauri::command]
-async fn validate_btc_mnemonic(mnemonic: String) -> Result<MnemonicValidationResult, AppError> {
+async fn validate_seed_phrase(seed_phrase: String) -> Result<SeedPhraseValidationResult, AppError> {
     let validator = SeedPhraseValidator::new();
-    Ok(validator.validate_mnemonic(&mnemonic))
+    Ok(validator.validate_seed_phrase(&seed_phrase))
 }
 
 #[tauri::command]
-async fn format_mnemonic(raw_input: String) -> Result<String, AppError> {
-    let formatted = MnemonicFormatter::clean_input(&raw_input);
+async fn format_seed_phrase(raw_input: String) -> Result<String, AppError> {
+    let formatted = SeedPhraseFormatter::clean_input(&raw_input);
     
     // Validate the formatted result
-    if !MnemonicFormatter::validate_format(&formatted) {
-        return Err(AppError::MnemonicError(
-            "Failed to format mnemonic properly".to_string()
+    if !SeedPhraseFormatter::validate_format(&formatted) {
+        return Err(AppError::SeedPhraseError(
+            "Failed to format seed phrase properly".to_string()
         ));
     }
     
@@ -301,33 +301,33 @@ async fn format_mnemonic(raw_input: String) -> Result<String, AppError> {
 }
 
 #[tauri::command]
-async fn format_mnemonic_comprehensive(raw_input: String) -> Result<MnemonicFormatResult, AppError> {
-    let result = MnemonicFormatter::format_mnemonic_comprehensive(&raw_input);
+async fn format_seed_phrase_comprehensive(raw_input: String) -> Result<SeedPhraseFormatResult, AppError> {
+    let result = SeedPhraseFormatter::format_seed_phrase_comprehensive(&raw_input);
     
     // Validate the formatting result
-    if let Err(e) = MnemonicFormatter::validate_and_confirm_format(&result) {
-        return Err(AppError::MnemonicError(format!("Formatting validation failed: {}", e)));
+    if let Err(e) = SeedPhraseFormatter::validate_and_confirm_format(&result) {
+        return Err(AppError::SeedPhraseError(format!("Formatting validation failed: {}", e)));
     }
     
     Ok(result)
 }
 
 #[tauri::command]
-async fn encrypt_mnemonic_with_wallet_metadata(
-    mnemonic: String,
+async fn encrypt_seed_phrase_with_wallet_metadata(
+    seed_phrase: String,
     passphrase: String,
     password: Option<String>, // Make password optional
     wallet_metadata: Option<WalletMetadata>,
     state: State<'_, AppState>,
 ) -> Result<EncryptWithMetadataResult, AppError> {
 
-    // Validate mnemonic first
+    // Validate seed phrase first
     let validator = SeedPhraseValidator::new();
-    let mnemonic_validation = validator.validate_mnemonic(&mnemonic);
-    if !mnemonic_validation.is_valid {
-        return Err(AppError::MnemonicError(format!(
-            "Mnemonic validation failed: {}",
-            mnemonic_validation.errors.join(", ")
+    let seed_phrase_validation = validator.validate_seed_phrase(&seed_phrase);
+    if !seed_phrase_validation.is_valid {
+        return Err(AppError::SeedPhraseError(format!(
+            "Seed phrase validation failed: {}",
+            seed_phrase_validation.errors.join(", ")
         )));
     }
 
@@ -344,13 +344,13 @@ async fn encrypt_mnemonic_with_wallet_metadata(
     let password = password.unwrap_or_default();
 
     // Perform encryption
-    let encrypted_content = encrypt_data(&mnemonic, &passphrase, &password)
+    let encrypted_content = encrypt_data(&seed_phrase, &passphrase, &password)
         .map_err(|e| AppError::EncryptionError(e.to_string()))?;
 
     // Generate filename and wallet info
     let (suggested_filename, wallet_info) = if let Some(mut metadata) = wallet_metadata {
-        // Update metadata with actual mnemonic word count
-        metadata.mnemonic_word_count = Some(mnemonic_validation.word_count);
+        // Update metadata with actual seed phrase word count
+        metadata.seed_phrase_word_count = Some(seed_phrase_validation.word_count);
         
         let filename = generate_wallet_filename(&metadata);
         let wallet_info = WalletInfo {
@@ -358,12 +358,12 @@ async fn encrypt_mnemonic_with_wallet_metadata(
             wallet_type: metadata.wallet_type.clone(),
             created_at: metadata.created_at,
             file_path: None,
-            mnemonic_word_count: Some(mnemonic_validation.word_count),
+            seed_phrase_word_count: Some(seed_phrase_validation.word_count),
         };
         (filename, Some(wallet_info))
     } else {
         let timestamp = Utc::now().format("%Y%m%d_%H%M%S").to_string();
-        (format!("btc_mnemonic_{}.bin", timestamp), None)
+        (format!("seed_phrase_{}.bin", timestamp), None)
     };
 
     Ok(EncryptWithMetadataResult {
@@ -418,12 +418,12 @@ async fn get_security_reminder_config() -> Result<SecurityReminderConfig, AppErr
 }
 
 #[tauri::command]
-async fn check_enhanced_network_security(has_mnemonic_content: bool) -> Result<NetworkStatus, AppError> {
+async fn check_enhanced_network_security(has_seed_phrase_content: bool) -> Result<NetworkStatus, AppError> {
     let is_connected = is_network_connected().await;
     
     let warning_message = if is_connected {
-        if has_mnemonic_content {
-            Some("⚠️ Network connection detected! When handling BTC mnemonics, it is strongly recommended to disconnect from the network to ensure maximum security. Mnemonic leakage may result in asset loss.".to_string())
+        if has_seed_phrase_content {
+            Some("⚠️ Network connection detected! When handling seed phrases, it is strongly recommended to disconnect from the network to ensure maximum security. Seed phrase leakage may result in asset loss.".to_string())
         } else {
             Some("Network connection detected. For maximum security, please disconnect from the internet before performing encryption/decryption operations.".to_string())
         }
@@ -438,13 +438,13 @@ async fn check_enhanced_network_security(has_mnemonic_content: bool) -> Result<N
 }
 
 #[tauri::command]
-async fn get_mnemonic_suggestions(prefix: String, limit: Option<usize>) -> Result<Vec<String>, AppError> {
+async fn get_seed_phrase_suggestions(prefix: String, limit: Option<usize>) -> Result<Vec<String>, AppError> {
     let suggestion_limit = limit.unwrap_or(8);
     Ok(get_bip39_suggestions(&prefix, suggestion_limit))
 }
 
 #[tauri::command]
-async fn validate_mnemonic_word(word: String) -> Result<bool, AppError> {
+async fn validate_seed_phrase_word(word: String) -> Result<bool, AppError> {
     Ok(is_valid_bip39_word(&word))
 }
 
@@ -461,7 +461,7 @@ pub fn generate_wallet_filename(metadata: &WalletMetadata) -> String {
         })
         .collect::<String>();
     
-    let word_count_suffix = if let Some(count) = metadata.mnemonic_word_count {
+    let word_count_suffix = if let Some(count) = metadata.seed_phrase_word_count {
         format!("_{}words", count)
     } else {
         String::new()
@@ -571,7 +571,7 @@ pub fn parse_filename_for_wallet_info(filename: &str) -> FilenameParseResult {
             wallet_type: WalletType::from_string(&wallet_type_str),
             created_at,
             file_path: Some(filename.to_string()),
-            mnemonic_word_count: word_count,
+            seed_phrase_word_count: word_count,
         };
         
         FilenameParseResult {
@@ -802,24 +802,24 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .manage(app_state)
         .invoke_handler(tauri::generate_handler![
-            encrypt_mnemonic,
+            encrypt_seed_phrase,
             decrypt_content,
             decrypt_with_advanced_crypto,
             generate_passphrase,
             validate_passphrase_words,
             check_network_status,
             save_to_file,
-            validate_btc_mnemonic,
-            format_mnemonic,
-            format_mnemonic_comprehensive,
-            encrypt_mnemonic_with_wallet_metadata,
+            validate_seed_phrase,
+            format_seed_phrase,
+            format_seed_phrase_comprehensive,
+            encrypt_seed_phrase_with_wallet_metadata,
             generate_wallet_filename_preview,
             parse_wallet_filename,
             get_preset_wallet_labels,
             get_security_reminder_config,
             check_enhanced_network_security,
-            get_mnemonic_suggestions,
-            validate_mnemonic_word,
+            get_seed_phrase_suggestions,
+            validate_seed_phrase_word,
             encrypt_with_advanced_crypto,
             verify_file_integrity,
             get_file_integrity_info,

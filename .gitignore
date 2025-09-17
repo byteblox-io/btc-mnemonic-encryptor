@@ -34,3 +34,8 @@ Cargo.toml
 
 # OS generated files
 Thumbs.db
+
+# Configuration files (sensitive/build-specific)
+package.json
+package-lock.json
+vite.config.ts

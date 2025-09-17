@@ -1,15 +1,37 @@
 // Clipboard security utilities for seed phrase protection
 
+// Global settings and timer
+let clipboardSecuritySettings = {
+    allowCopy: true,
+    neverAllow: false,
+    autoCleanTimeout: 10 // seconds
+};
+let clipboardCleanupTimer = null;
+
+// Reference to showMessage function from main.js
+let showMessage = null;
+
 /**
- * Prevents clipboard access on mnemonic input fields
+ * Initialize clipboard utilities with required dependencies
+ * @param {Function} messageFunction - The showMessage function from main.js
+ * @param {Object} settings - Initial clipboard security settings
+ */
+export function initializeClipboardUtils(messageFunction, settings = {}) {
+    showMessage = messageFunction;
+    clipboardSecuritySettings = { ...clipboardSecuritySettings, ...settings };
+    loadClipboardSettings();
+}
+
+/**
+ * Prevents clipboard access on seed phrase input fields
  * @param {HTMLElement} element - The DOM element to protect
  */
-export function preventMnemonicClipboardAccess(element) {
+export function preventSeedPhraseClipboardAccess(element) {
     if (!element) return;
 
     // Disable context menu (right-click)
     element.addEventListener('contextmenu', (e) => {
-        if (isMnemonicField(element)) {
+        if (isSeedPhraseField(element)) {
             e.preventDefault();
             showClipboardSecurityWarning('Context menu disabled for security');
         }
@@ -17,7 +39,7 @@ export function preventMnemonicClipboardAccess(element) {
 
     // Disable copy shortcuts
     element.addEventListener('keydown', (e) => {
-        if (isMnemonicField(element) && (e.ctrlKey || e.metaKey)) {
+        if (isSeedPhraseField(element) && (e.ctrlKey || e.metaKey)) {
             if (e.key === 'c' || e.key === 'x' || e.key === 'a') {
                 if (clipboardSecuritySettings.neverAllow) {
                     e.preventDefault();
@@ -35,22 +57,22 @@ export function preventMnemonicClipboardAccess(element) {
 }
 
 /**
- * Determines if an element is a mnemonic field
+ * Determines if an element is a seed phrase field
  * @param {HTMLElement} element - The DOM element to check
- * @returns {boolean} True if element is a mnemonic field
+ * @returns {boolean} True if element is a seed phrase field
  */
-export function isMnemonicField(element) {
-    return element.id === 'btc-mnemonic-input' ||
-           element.closest('.mnemonic-input-container') !== null ||
-           (element.value && containsMnemonicWords(element.value));
+export function isSeedPhraseField(element) {
+    return element.id === 'seed-phrase-input' ||
+           element.closest('.seed-phrase-input-container') !== null ||
+           (element.value && containsSeedPhraseWords(element.value));
 }
 
 /**
- * Checks if text contains BIP39 mnemonic words
+ * Checks if text contains BIP39 seed phrase words
  * @param {string} text - Text to analyze
- * @returns {boolean} True if text contains likely mnemonic words
+ * @returns {boolean} True if text contains likely seed phrase words
  */
-export function containsMnemonicWords(text) {
+export function containsSeedPhraseWords(text) {
     if (!text || text.length < 10) return false;
 
     const words = text.toLowerCase().split(/\s+/);
@@ -58,8 +80,8 @@ export function containsMnemonicWords(text) {
 
     // Import BIP39 word list (must be imported in main module)
     // This function assumes bip39Words is available in scope
-    const mnemonicWords = words.filter(word => window.bip39Words?.includes(word));
-    return mnemonicWords.length >= Math.min(6, words.length * 0.7);
+    const seedPhraseWords = words.filter(word => window.bip39Words?.includes(word));
+    return seedPhraseWords.length >= Math.min(6, words.length * 0.7);
 }
 
 /**
@@ -145,18 +167,24 @@ export function showClipboardWarningDialog(content) {
 export function performSecureCopy(content, autoClean = true) {
     try {
         navigator.clipboard.writeText(content).then(() => {
-            showMessage('Content copied to clipboard', 'success');
+            if (showMessage) {
+                showMessage('Content copied to clipboard', 'success');
+            }
 
             if (autoClean) {
                 startClipboardCleanupTimer();
             }
         }).catch(err => {
             console.error('Failed to copy to clipboard:', err);
-            showMessage('Failed to copy to clipboard', 'error');
+            if (showMessage) {
+                showMessage('Failed to copy to clipboard', 'error');
+            }
         });
     } catch (error) {
         console.error('Clipboard access error:', error);
-        showMessage('Clipboard access denied', 'error');
+        if (showMessage) {
+            showMessage('Clipboard access denied', 'error');
+        }
     }
 }
 
@@ -206,7 +234,9 @@ export function startClipboardCleanupTimer() {
 export function clearClipboard() {
     try {
         navigator.clipboard.writeText('').then(() => {
-            showMessage('Clipboard cleared for security', 'info');
+            if (showMessage) {
+                showMessage('Clipboard cleared for security', 'info');
+            }
         }).catch(err => {
             console.warn('Failed to clear clipboard:', err);
         });

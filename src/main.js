@@ -1,6 +1,9 @@
 // Seed Phrase Shield - Enhanced with Auto-completion
 console.log('Seed Phrase Shield loaded');
 
+// Import clipboard utilities
+import { initializeClipboardUtils, preventSeedPhraseClipboardAccess, loadClipboardSettings, saveClipboardSettings } from './utils/clipboard.js';
+
 // Global variables
 let tauriAPI = {};
 let currentTab = 'encrypt';
@@ -34,12 +37,36 @@ import('./bip39-words.json').then(words => {
     console.error('Failed to load BIP39 word list:', error);
 });
 
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing...');
+// Wait for Tauri to be ready before initializing
+async function waitForTauri() {
+    console.log('Waiting for Tauri to be ready...');
+
+    // Poll for Tauri API until available
+    const checkInterval = setInterval(() => {
+        if (window.__TAURI__) {
+            console.log('Tauri API detected!');
+            clearInterval(checkInterval);
+            initializeApp();
+        }
+    }, 100);
+
+    // Timeout after 10 seconds
+    setTimeout(() => {
+        clearInterval(checkInterval);
+        console.warn('Tauri API still not available after 10 seconds - continuing anyway');
+        initializeApp();
+    }, 10000);
+}
+
+// Initialize the application once Tauri is ready
+function initializeApp() {
+    console.log('Initializing application...');
 
     // Initialize Tauri APIs
     initializeTauri();
+
+    // Initialize clipboard utilities early with showMessage function
+    initializeClipboardUtils(showMessage, clipboardSecuritySettings);
 
     // Check network status immediately on startup
     checkNetworkStatusOnStartup();
@@ -54,7 +81,10 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeSecurityReminders();
 
     console.log('Application initialized');
-});
+}
+
+// Start waiting for Tauri
+waitForTauri();
 
 function initializeTauri() {
     console.log('Initializing Tauri APIs...');
@@ -137,7 +167,10 @@ function enableOfflineMode() {
     isOfflineMode = true;
 
     // Load clipboard settings
-    loadClipboardSettings();
+    importedLoadClipboardSettings();
+
+    // Initialize clipboard utilities with showMessage function
+    initializeClipboardUtils(showMessage, clipboardSecuritySettings);
 
     console.log('Offline mode enabled');
 }
@@ -153,6 +186,11 @@ function dismissNetworkWarning() {
     if (networkWarning) {
         networkWarning.classList.add('hidden');
     }
+}
+
+// Placeholder function for wallet label dialog
+function openWalletLabelDialog() {
+    showMessage('Wallet label feature coming soon!', 'info');
 }
 
 // Clipboard Security Functions - Now imported from utils/clipboard.js
@@ -223,10 +261,10 @@ function showPhysicalKeyboardWarning() {
     if (continueBtn) {
         continueBtn.addEventListener('click', () => {
             closeModal();
-            // Focus back to the mnemonic input
-            const mnemonicInput = document.getElementById('btc-mnemonic-input');
-            if (mnemonicInput) {
-                mnemonicInput.focus();
+            // Focus back to the seed phrase input
+            const seedPhraseInput = document.getElementById('seed-phrase-input');
+            if (seedPhraseInput) {
+                seedPhraseInput.focus();
             }
         });
     }
@@ -235,10 +273,12 @@ function showPhysicalKeyboardWarning() {
     if (virtualKeyboardBtn) {
         virtualKeyboardBtn.addEventListener('click', () => {
             closeModal();
-            // Directly open the virtual keyboard for mnemonic input
+            // Directly open the virtual keyboard for seed phrase input
             console.log('Opening virtual keyboard for Seed Phrase input');
             setTimeout(() => {
-                openVirtualKeyboard('btc-mnemonic-input', false);
+                if (window.keyboardInit && window.keyboardInit.openVirtualKeyboard) {
+                    window.keyboardInit.openVirtualKeyboard('seed-phrase-input', false);
+                }
             }, 100); // Small delay to ensure modal is fully closed
         });
     }
@@ -253,14 +293,14 @@ function setupEventListeners() {
         dismissWarning.addEventListener('click', dismissNetworkWarning);
     }
 
-    // Setup clipboard protection for mnemonic fields
-    const mnemonicInputElement = document.getElementById('btc-mnemonic-input');
-    if (mnemonicInputElement) {
-        preventMnemonicClipboardAccess(mnemonicInputElement);
+    // Setup clipboard protection for seed phrase fields
+    const seedPhraseInputElement = document.getElementById('seed-phrase-input');
+    if (seedPhraseInputElement) {
+        preventSeedPhraseClipboardAccess(seedPhraseInputElement);
 
-        // Add physical keyboard warning for mnemonic input
-        mnemonicInputElement.addEventListener('keydown', function(e) {
-            // Show warning when physical keyboard is used for mnemonic input
+        // Add physical keyboard warning for seed phrase input
+        seedPhraseInputElement.addEventListener('keydown', function(e) {
+            // Show warning when physical keyboard is used for seed phrase input
             if (!e.isTrusted) return; // Only for real user events
             
             // Show warning modal for physical keyboard usage
@@ -324,7 +364,11 @@ function setupEventListeners() {
         btn.addEventListener('click', function() {
             const targetId = this.dataset.target;
             const isPassword = this.dataset.password === 'true';
-            openVirtualKeyboard(targetId, isPassword);
+            if (window.keyboardInit && window.keyboardInit.openVirtualKeyboard) {
+                window.keyboardInit.openVirtualKeyboard(targetId, isPassword);
+            } else {
+                console.warn('Keyboard module not initialized yet');
+            }
         });
     });
     
@@ -334,20 +378,34 @@ function setupEventListeners() {
     const keyboardOk = document.getElementById('keyboard-ok');
     
     if (closeKeyboard) {
-        closeKeyboard.addEventListener('click', closeVirtualKeyboard);
+        closeKeyboard.addEventListener('click', () => {
+            if (window.keyboardInit && window.keyboardInit.closeVirtualKeyboard) {
+                window.keyboardInit.closeVirtualKeyboard();
+            }
+        });
     }
     if (keyboardCancel) {
-        keyboardCancel.addEventListener('click', closeVirtualKeyboard);
+        keyboardCancel.addEventListener('click', () => {
+            if (window.keyboardInit && window.keyboardInit.closeVirtualKeyboard) {
+                window.keyboardInit.closeVirtualKeyboard();
+            }
+        });
     }
     if (keyboardOk) {
-        keyboardOk.addEventListener('click', confirmKeyboardInput);
+        keyboardOk.addEventListener('click', () => {
+            if (window.keyboardInit && window.keyboardInit.confirmKeyboardInput) {
+                window.keyboardInit.confirmKeyboardInput();
+            }
+        });
     }
     
     // Virtual keyboard key events
     document.querySelectorAll('.key-btn').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault();
-            handleKeyboardInput(button.dataset.key, button.dataset.shift);
+            if (window.keyboardInit && window.keyboardInit.handleKeyboardInput) {
+                window.keyboardInit.handleKeyboardInput(button.dataset.key, button.dataset.shift);
+            }
         });
     });
     
@@ -356,14 +414,16 @@ function setupEventListeners() {
     if (modal) {
         modal.addEventListener('click', function(e) {
             if (e.target === modal) {
-                closeVirtualKeyboard();
+                if (window.keyboardInit && window.keyboardInit.closeVirtualKeyboard) {
+                    window.keyboardInit.closeVirtualKeyboard();
+                }
             }
         });
     }
     
     // Input validation
     const inputs = [
-        'btc-mnemonic-input',
+        'seed-phrase-input',
         'encrypt-passphrase1',
         'encrypt-passphrase2',
         'encrypt-password1',
@@ -378,14 +438,14 @@ function setupEventListeners() {
         if (element) {
             element.addEventListener('input', validateForms);
             
-            // Special handling for mnemonic input
-            if (id === 'btc-mnemonic-input') {
-                element.addEventListener('input', () => validateMnemonic());
-                element.addEventListener('blur', () => validateMnemonic());
+            // Special handling for seed phrase input
+            if (id === 'seed-phrase-input') {
+                element.addEventListener('input', () => validateSeedPhrase());
+                element.addEventListener('blur', () => validateSeedPhrase());
                 
-                // Enable format button when mnemonic input has content
+                // Enable format button when seed phrase input has content
                 element.addEventListener('input', function() {
-                    const formatBtn = document.getElementById('format-mnemonic-btn');
+                    const formatBtn = document.getElementById('format-seed-phrase-btn');
                     if (formatBtn) {
                         formatBtn.disabled = !this.value.trim();
                     }
@@ -394,21 +454,37 @@ function setupEventListeners() {
         }
     });
     
-    // Format mnemonic button
-    const formatBtn = document.getElementById('format-mnemonic-btn');
+    // Format seed phrase button
+    const formatBtn = document.getElementById('format-seed-phrase-btn');
     if (formatBtn) {
-        formatBtn.addEventListener('click', () => formatMnemonic());
+        formatBtn.addEventListener('click', () => {
+            const seedPhraseInput = document.getElementById('seed-phrase-input');
+            if (seedPhraseInput && seedPhraseInput.value.trim()) {
+                const originalValue = seedPhraseInput.value;
+                const formattedValue = formatSeedPhrase(originalValue);
+                
+                if (formattedValue !== originalValue) {
+                    seedPhraseInput.value = formattedValue;
+                    // Trigger validation after formatting
+                    validateSeedPhrase();
+                    // Show feedback that formatting was applied
+                    showMessage('Seed phrase formatted successfully', 'success');
+                } else {
+                    showMessage('Seed phrase is already properly formatted', 'info');
+                }
+            }
+        });
     }
     
     // Virtual keyboard events
     document.addEventListener('keydown', function(event) {
-        // Only handle keyboard events when virtual keyboard is open and target is mnemonic field
+        // Only handle keyboard events when virtual keyboard is open and target is seed phrase field
         if (!virtualKeyboard.isOpen || !virtualKeyboard.targetInput || 
-            virtualKeyboard.targetInput.id !== 'btc-mnemonic-input') {
+            virtualKeyboard.targetInput.id !== 'seed-phrase-input') {
             return;
         }
         
-        const suggestionsContainer = document.getElementById('mnemonic-suggestions');
+        const suggestionsContainer = document.getElementById('seed-phrase-suggestions');
         if (!suggestionsContainer || suggestionsContainer.classList.contains('hidden')) {
             return;
         }
@@ -441,24 +517,31 @@ function setupEventListeners() {
                 if (virtualKeyboard.suggestionIndex >= 0 && 
                     virtualKeyboard.suggestionIndex < suggestionItems.length) {
                     const selectedWord = suggestionItems[virtualKeyboard.suggestionIndex].textContent;
-                    selectMnemonicSuggestion(selectedWord);
+                    selectSeedPhraseSuggestion(selectedWord);
                 }
                 break;
                 
             case 'Escape':
                 event.preventDefault();
-                hideMnemonicSuggestions();
+                hideSeedPhraseSuggestions();
                 break;
         }
     });
     
-    // Auto-copy mnemonic to main content
-    const mnemonicInput = document.getElementById('btc-mnemonic-input');
-    if (mnemonicInput) {
-        mnemonicInput.addEventListener('input', autoCopyMnemonic);
+    // Auto-copy seed phrase to main content
+    const seedPhraseInput = document.getElementById('seed-phrase-input');
+    if (seedPhraseInput) {
+        seedPhraseInput.addEventListener('input', autoCopySeedPhrase);
     }
     
     console.log('Event listeners setup complete');
+}
+
+// Placeholder function for auto-copying seed phrase (feature not yet implemented)
+function autoCopySeedPhrase() {
+    console.log('Auto-copy seed phrase feature - placeholder function');
+    // This function would typically copy seed phrase input to main content area
+    // For now, it's a placeholder until the full feature is implemented
 }
 
 function switchTab(tabName) {
@@ -487,7 +570,7 @@ function validateForms() {
 }
 
 function validateEncryptForm() {
-    const mnemonic = getValue('btc-mnemonic-input');
+    const seedPhrase = getValue('seed-phrase-input');
     const passphrase1 = getValue('encrypt-passphrase1');
     const passphrase2 = getValue('encrypt-passphrase2');
     // Password is now optional, so we don't require it for form validation
@@ -500,7 +583,7 @@ function validateEncryptForm() {
     // Password validation (optional) - if provided, both fields must match
     const isPasswordValid = !password1 || (password1 && password1 === password2);
     
-    const isValid = mnemonic && isPassphraseValid && isPasswordValid;
+    const isValid = seedPhrase && isPassphraseValid && isPasswordValid;
     
     const encryptBtn = document.getElementById('encrypt-btn');
     const encryptWithWalletBtn = document.getElementById('encrypt-with-wallet-btn');
@@ -590,11 +673,11 @@ async function performEncryption() {
         return;
     }
     
-    const mnemonic = getValue('btc-mnemonic-input');
+    const seedPhrase = getValue('seed-phrase-input');
     const passphrase = getValue('encrypt-passphrase1');
     const password = getValue('encrypt-password1') || ''; // Use empty string if not provided
     
-    if (!mnemonic || !passphrase) {
+    if (!seedPhrase || !passphrase) {
         showMessage('Please fill all required fields', 'error');
         return;
     }
@@ -619,7 +702,7 @@ async function performEncryption() {
             
             encrypted = await tauriAPI.invoke('encrypt_with_advanced_crypto', {
                 request: {
-                    content: mnemonic,
+                    content: seedPhrase,
                     passphrase: passphrase,
                     password: password,
                     key_derivation_method: keyDerivationMethod,
@@ -633,8 +716,8 @@ async function performEncryption() {
             showIntegrityInfo(encrypted.integrity_info);
         } else {
             // Use standard encryption
-            encrypted = await tauriAPI.invoke('encrypt_mnemonic', {
-                mnemonic: mnemonic,
+            encrypted = await tauriAPI.invoke('encrypt_seed_phrase', {
+                seedPhrase: seedPhrase,
                 passphrase: passphrase,
                 password: password
             });
@@ -767,7 +850,7 @@ async function saveEncryptedFile() {
     
     try {
         // Use suggested filename if available, otherwise default filename
-        const defaultFilename = window.suggestedFilename || 'encrypted_mnemonic.bin';
+        const defaultFilename = window.suggestedFilename || 'encrypted_seed_phrase.bin';
         
         // Get user's home directory and default to Documents folder
         let defaultPath;
@@ -950,10 +1033,10 @@ function showFileInfoModal(integrityInfo, walletInfo, filename) {
                             <div class="info-label">Created:</div>
                             <div class="info-value">${new Date(walletInfo.wallet_info.created_at).toLocaleString()}</div>
                         </div>
-                        ${walletInfo.wallet_info.mnemonic_word_count ? `
+                        ${walletInfo.wallet_info.seed_phrase_word_count ? `
                         <div class="info-item">
-                            <div class="info-label">Mnemonic Words:</div>
-                            <div class="info-value">${walletInfo.wallet_info.mnemonic_word_count}</div>
+                            <div class="info-label">Seed Phrase Words:</div>
+                            <div class="info-value">${walletInfo.wallet_info.seed_phrase_word_count}</div>
                         </div>
                         ` : ''}
                     </div>
@@ -1115,95 +1198,6 @@ async function verifyFileIntegrity() {
     }
 }
 
-// Virtual Keyboard Functions
-// Moved to ui/keyboard.js - removed duplicate function definition
-// This function is now imported and used from the keyboard module
-// The implementation is maintained in src/ui/keyboard.js
-
-// Moved to ui/keyboard.js - removed duplicate function definition
-// This function is now imported and used from the keyboard module
-// The implementation is maintained in src/ui/keyboard.js
-
-// Moved to ui/keyboard.js - removed duplicate function definition
-// This function is now imported and used from the keyboard module
-// The implementation is maintained in src/ui/keyboard.js
-
-// Moved to ui/keyboard.js - removed duplicate function definition
-// This function is now imported and used from the keyboard module
-// The implementation is maintained in src/ui/keyboard.js
-
-// Moved to ui/keyboard.js - removed duplicate function definition
-// This function is now imported and used from the keyboard module
-// The implementation is maintained in src/ui/keyboard.js
-
-// Moved to ui/keyboard.js - removed duplicate function definition
-// This function is now imported and used from the keyboard module
-// The implementation is maintained in src/ui/keyboard.js
-
-// Moved to ui/keyboard.js - removed duplicate function definition
-// This function is now imported and used from the keyboard module
-// The implementation is maintained in src/ui/keyboard.js
-
-// Moved to ui/keyboard.js - removed duplicate function definition
-// This function is now imported and used from the keyboard module
-// The implementation is maintained in src/ui/keyboard.js
-
-// Moved to ui/keyboard.js - removed duplicate function definition
-// This function is now imported and used from the keyboard module
-// The implementation is maintained in src/ui/keyboard.js
-
-// Moved to ui/keyboard.js - removed duplicate function definition
-// This function is now imported and used from the keyboard module
-// The implementation is maintained in src/ui/keyboard.js
-
-// Moved to ui/keyboard.js - removed duplicate function definition
-// This function is now imported and used from the keyboard module
-// The implementation is maintained in src/ui/keyboard.js
-
-// Moved to ui/keyboard.js - removed duplicate function definition
-// This function is now imported and used from the keyboard module
-// The implementation is maintained in src/ui/keyboard.js
-
-// Moved to ui/keyboard.js - removed duplicate function definition
-// This function is now imported and used from the keyboard module
-// The implementation is maintained in src/ui/keyboard.js
-
-// Mnemonic validation functions
-// Mnemonic validation functions - Now imported from utils/validation.js
-
-// File Information Functions
-async function showFileInfo() {
-    console.log('Showing file information...');
-    
-    const content = getValue('decrypt-content');
-    if (!content) {
-        showMessage('No file content loaded to analyze', 'error');
-        return;
-    }
-    
-    // Try to get filename from a stored variable or ask user
-    let filename = getCurrentFilename();
-    if (!filename) {
-        filename = prompt('Enter the filename to parse wallet information:');
-        if (!filename) {
-            showMessage('Filename required to parse wallet information', 'error');
-            return;
-        }
-    }
-    
-    try {
-        if (tauriAPI.invoke) {
-            const result = await tauriAPI.invoke('parse_wallet_filename', { filename: filename });
-            displayFileInfo(result);
-        } else {
-            showMessage('File parsing not available', 'error');
-        }
-    } catch (error) {
-        console.error('Failed to parse file info:', error);
-        showMessage(`Failed to parse file info: ${error}`, 'error');
-    }
-}
-
 function getCurrentFilename() {
     // This would be set when a file is loaded
     return window.currentLoadedFilename || null;
@@ -1240,8 +1234,8 @@ function createFileInfoModal(walletInfo) {
         walletInfo.wallet_type.Custom || 'Unknown' : 
         walletInfo.wallet_type;
     
-    const wordCountDisplay = walletInfo.mnemonic_word_count ? 
-        `${walletInfo.mnemonic_word_count} words` : 'Unknown';
+    const wordCountDisplay = walletInfo.seed_phrase_word_count ?
+        `${walletInfo.seed_phrase_word_count} words` : 'Unknown';
     
     const createdAt = new Date(walletInfo.created_at).toLocaleString();
     
@@ -1315,23 +1309,13 @@ import { init as initKeyboard } from './ui/keyboard.js';
 import { init as initClipboard } from './ui/clipboard.js';
 
 // Import validation utilities
-import { isMnemonicField, containsMnemonicWords, validateMnemonicStructure, formatMnemonic, updateValidationStatus, validateMnemonicComprehensive } from './utils/validation.js';
+import { isSeedPhraseField, containsSeedPhraseWords, validateSeedPhrase, validateSeedPhraseStructure, formatSeedPhrase, updateValidationStatus, validateSeedPhraseComprehensive } from './utils/validation.js';
 
-// Import clipboard utilities
-import { preventMnemonicClipboardAccess, handleSecureCopy, showClipboardSecurityWarning, loadClipboardSettings, saveClipboardSettings } from './utils/clipboard.js';
-
-// Initialize UI modules during DOMContentLoaded
-// Note: These are now handled by their respective init functions
-
-// Initialize UI modules when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize UI modules
-    const keyboardInit = initKeyboard();
-    const clipboardInit = initClipboard();
-
-    // Store references globally for access in other functions
-    window.keyboardInit = keyboardInit;
-    window.clipboardInit = clipboardInit;
+// Wait for DOM to be fully loaded before initializing UI modules
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize UI modules after DOM is ready
+    window.keyboardInit = initKeyboard();
+    window.clipboardInit = initClipboard();
 });
 
 // Security Reminder System
@@ -1413,7 +1397,7 @@ function showFirstTimeSecurityGuide() {
     document.getElementById('understood-security').addEventListener('click', () => {
         const dontShow = document.getElementById('dont-show-guide').checked;
         if (dontShow) {
-            localStorage.setItem('btc_mnemonic_guide_seen', 'true');
+            localStorage.setItem('seed_phrase_guide_seen', 'true');
         }
         modal.remove();
     });

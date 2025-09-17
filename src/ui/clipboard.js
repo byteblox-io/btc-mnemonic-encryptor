@@ -7,12 +7,12 @@ export function init() {
     };
     let clipboardCleanupTimer = null;
 
-    function preventMnemonicClipboardAccess(element) {
+    function preventSeedPhraseClipboardAccess(element) {
         if (!element) return;
 
         // Disable context menu (right-click)
         element.addEventListener('contextmenu', (e) => {
-            if (isMnemonicField(element)) {
+            if (isSeedPhraseField(element)) {
                 e.preventDefault();
                 showClipboardSecurityWarning('Context menu disabled for security');
             }
@@ -20,7 +20,7 @@ export function init() {
 
         // Disable copy shortcuts
         element.addEventListener('keydown', (e) => {
-            if (isMnemonicField(element) && (e.ctrlKey || e.metaKey)) {
+            if (isSeedPhraseField(element) && (e.ctrlKey || e.metaKey)) {
                 if (e.key === 'c' || e.key === 'x' || e.key === 'a') {
                     if (clipboardSecuritySettings.neverAllow) {
                         e.preventDefault();
@@ -37,21 +37,21 @@ export function init() {
         });
     }
 
-    function isMnemonicField(element) {
-        return element.id === 'btc-mnemonic-input' ||
-               element.closest('.mnemonic-input-container') !== null ||
-               element.value && containsMnemonicWords(element.value);
+    function isSeedPhraseField(element) {
+        return element.id === 'seed-phrase-input' ||
+               element.closest('.seed-phrase-input-container') !== null ||
+               element.value && containsSeedPhraseWords(element.value);
     }
 
-    function containsMnemonicWords(text) {
+    function containsSeedPhraseWords(text) {
         if (!text || text.length < 10) return false;
 
         const words = text.toLowerCase().split(/\s+/);
         if (words.length < 6) return false;
 
         // Check if most words are from BIP39 wordlist
-        const mnemonicWords = words.filter(word => window.bip39Words.includes(word));
-        return mnemonicWords.length >= Math.min(6, words.length * 0.7);
+        const seedPhraseWords = words.filter(word => window.bip39Words.includes(word));
+        return seedPhraseWords.length >= Math.min(6, words.length * 0.7);
     }
 
     function handleSecureCopy(content) {
@@ -238,13 +238,13 @@ export function init() {
     }
 
     // Initialize event listeners for clipboard protection
-    const mnemonicInputElement = document.getElementById('btc-mnemonic-input');
-    if (mnemonicInputElement) {
-        preventMnemonicClipboardAccess(mnemonicInputElement);
+    const seedPhraseInputElement = document.getElementById('seed-phrase-input');
+    if (seedPhraseInputElement) {
+        preventSeedPhraseClipboardAccess(seedPhraseInputElement);
 
-        // Add physical keyboard warning for mnemonic input
-        mnemonicInputElement.addEventListener('keydown', function(e) {
-            // Show warning when physical keyboard is used for mnemonic input
+        // Add physical keyboard warning for seed phrase input
+        seedPhraseInputElement.addEventListener('keydown', function(e) {
+            // Show warning when physical keyboard is used for seed phrase input
             if (!e.isTrusted) return; // Only for real user events
 
             // Show warning modal for physical keyboard usage
@@ -252,21 +252,13 @@ export function init() {
         }, { once: true }); // Only show once per session
     }
 
-    // Setup clipboard event listeners
-    document.addEventListener('DOMContentLoaded', function() {
-        // Load clipboard settings on startup
-        loadClipboardSettings();
-
-        // Set up clipboard protection for all mnemonic fields
-        const mnemonicFields = document.querySelectorAll('.mnemonic-input-container input, #btc-mnemonic-input');
-        mnemonicFields.forEach(field => {
-            preventMnemonicClipboardAccess(field);
-        });
-    });
+    // Setup clipboard event listeners - moved to DOMContentLoaded handler in main.js
+// This prevents duplicate initialization
+// All clipboard setup is now handled by main.js's DOMContentLoaded handler
 
     // Return public methods
     return {
-        preventMnemonicClipboardAccess,
+        preventSeedPhraseClipboardAccess,
         handleSecureCopy,
         showClipboardSecurityWarning,
         loadClipboardSettings,
@@ -341,10 +333,10 @@ function showPhysicalKeyboardWarning() {
     if (continueBtn) {
         continueBtn.addEventListener('click', () => {
             closeModal();
-            // Focus back to the mnemonic input
-            const mnemonicInput = document.getElementById('btc-mnemonic-input');
-            if (mnemonicInput) {
-                mnemonicInput.focus();
+            // Focus back to the seed phrase input
+            const seedPhraseInput = document.getElementById('seed-phrase-input');
+            if (seedPhraseInput) {
+                seedPhraseInput.focus();
             }
         });
     }
@@ -353,12 +345,12 @@ function showPhysicalKeyboardWarning() {
     if (virtualKeyboardBtn) {
         virtualKeyboardBtn.addEventListener('click', () => {
             closeModal();
-            // Directly open the virtual keyboard for mnemonic input
+            // Directly open the virtual keyboard for seed phrase input
             console.log('Opening virtual keyboard for Seed Phrase input');
             setTimeout(() => {
                 const keyboardInit = window.keyboardInit;
                 if (keyboardInit && keyboardInit.openVirtualKeyboard) {
-                    keyboardInit.openVirtualKeyboard('btc-mnemonic-input', false);
+                    keyboardInit.openVirtualKeyboard('seed-phrase-input', false);
                 }
             }, 100); // Small delay to ensure modal is fully closed
         });
