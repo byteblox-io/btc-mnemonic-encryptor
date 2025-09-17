@@ -191,7 +191,7 @@ async fn encrypt_mnemonic(
 ) -> Result<String, AppError> {
 
     // Validate mnemonic first
-    let validator = MnemonicValidator::new();
+    let validator = SeedPhraseValidator::new();
     let mnemonic_validation = validator.validate_mnemonic(&mnemonic);
     if !mnemonic_validation.is_valid {
         return Err(AppError::MnemonicError(format!(
@@ -282,7 +282,7 @@ async fn save_to_file(_content: String, _filename: String) -> Result<(), AppErro
 
 #[tauri::command]
 async fn validate_btc_mnemonic(mnemonic: String) -> Result<MnemonicValidationResult, AppError> {
-    let validator = MnemonicValidator::new();
+    let validator = SeedPhraseValidator::new();
     Ok(validator.validate_mnemonic(&mnemonic))
 }
 
@@ -322,7 +322,7 @@ async fn encrypt_mnemonic_with_wallet_metadata(
 ) -> Result<EncryptWithMetadataResult, AppError> {
 
     // Validate mnemonic first
-    let validator = MnemonicValidator::new();
+    let validator = SeedPhraseValidator::new();
     let mnemonic_validation = validator.validate_mnemonic(&mnemonic);
     if !mnemonic_validation.is_valid {
         return Err(AppError::MnemonicError(format!(
