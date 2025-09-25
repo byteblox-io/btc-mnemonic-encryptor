@@ -1,8 +1,78 @@
 // Seed Phrase Shield - Enhanced with Auto-completion
-console.log('Seed Phrase Shield loaded');
+console.log('🚀 Seed Phrase Shield loaded - Debug mode enabled');
+console.log('📝 Current URL:', window.location.href);
+console.log('🧭 User Agent:', navigator.userAgent);
+
+// Debug function to log DOM state
+function debugDOMState() {
+    console.log('🔍 DOM Debug Info:');
+    console.log('  - Document ready state:', document.readyState);
+    console.log('  - Body exists:', !!document.body);
+    console.log('  - Seed phrase input exists:', !!document.getElementById('seed-phrase-input'));
+    console.log('  - Virtual keyboard modal exists:', !!document.getElementById('virtual-keyboard-modal'));
+    console.log('  - Keyboard buttons found:', document.querySelectorAll('.keyboard-btn').length);
+}
+
+// Log initial state
+debugDOMState();
+
+// Message display function - declared early for use in initialization
+function showMessage(message, type = 'info') {
+    console.log(`Message (${type}):`, message);
+
+    // Create or update message display
+    let messageDiv = document.getElementById('app-message');
+    if (!messageDiv) {
+        messageDiv = document.createElement('div');
+        messageDiv.id = 'app-message';
+        messageDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 16px;
+            border-radius: 6px;
+            z-index: 10000;
+            max-width: 300px;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        document.body.appendChild(messageDiv);
+    }
+
+    messageDiv.textContent = message;
+
+    // Style based on type
+    switch (type) {
+        case 'success':
+            messageDiv.style.backgroundColor = '#d4edda';
+            messageDiv.style.color = '#155724';
+            messageDiv.style.border = '1px solid #c3e6cb';
+            break;
+        case 'error':
+            messageDiv.style.backgroundColor = '#f8d7da';
+            messageDiv.style.color = '#721c24';
+            messageDiv.style.border = '1px solid #f5c6cb';
+            break;
+        case 'info':
+        default:
+            messageDiv.style.backgroundColor = '#d1ecf1';
+            messageDiv.style.color = '#0c5460';
+            messageDiv.style.border = '1px solid #bee5eb';
+    }
+
+    // Auto-hide after 4 seconds
+    setTimeout(() => {
+        if (messageDiv && messageDiv.parentNode) {
+            messageDiv.parentNode.removeChild(messageDiv);
+        }
+    }, 4000);
+}
 
 // Import clipboard utilities
 import { initializeClipboardUtils, preventSeedPhraseClipboardAccess, loadClipboardSettings, saveClipboardSettings } from './utils/clipboard.js';
+
+// Import validation utilities
+import { validateSeedPhrase, formatSeedPhrase } from './utils/validation.js';
 
 // Global variables
 let tauriAPI = {};
@@ -14,28 +84,28 @@ let clipboardSecuritySettings = {
     autoCleanTimeout: 10 // seconds
 };
 let clipboardCleanupTimer = null;
-let virtualKeyboard = {
-    isOpen: false,
-    targetInput: null,
-    isPasswordMode: false,
-    inputText: '',
-    shiftPressed: false,
-    capsLock: false,
-    currentWord: '',
-    suggestions: [],
-    suggestionIndex: -1
-};
+let appInitialized = false; // Flag to prevent duplicate initialization
 
 // BIP39 word list cache
 let bip39Words = [];
 
-// Import BIP39 word list from JSON file
-import('./bip39-words.json').then(words => {
-    bip39Words = words.default;
-    console.log(`Loaded ${bip39Words.length} BIP39 words`);
-}).catch(error => {
-    console.error('Failed to load BIP39 word list:', error);
-});
+// Load BIP39 word list from JSON file using fetch
+fetch('./bip39-words.json')
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(words => {
+        bip39Words = words;
+        window.bip39Words = bip39Words; // Make it globally available
+        console.log(`Loaded ${bip39Words.length} BIP39 words`);
+    })
+    .catch(error => {
+        console.error('Failed to load BIP39 word list:', error);
+        bip39Words = []; // Fallback to empty array
+    });
 
 // Wait for Tauri to be ready before initializing
 async function waitForTauri() {
@@ -60,13 +130,17 @@ async function waitForTauri() {
 
 // Initialize the application once Tauri is ready
 function initializeApp() {
+    // Prevent duplicate initialization
+    if (appInitialized) {
+        console.log('App already initialized, skipping...');
+        return;
+    }
+    
     console.log('Initializing application...');
+    appInitialized = true;
 
     // Initialize Tauri APIs
     initializeTauri();
-
-    // Initialize clipboard utilities early with showMessage function
-    initializeClipboardUtils(showMessage, clipboardSecuritySettings);
 
     // Check network status immediately on startup
     checkNetworkStatusOnStartup();
@@ -82,6 +156,42 @@ function initializeApp() {
 
     console.log('Application initialized');
 }
+
+// Import and initialize UI modules
+import { init as initKeyboard } from './ui/keyboard.js';
+console.log('🛠️ Keyboard module imported successfully');
+console.log('🛠️ initKeyboard type:', typeof initKeyboard);
+
+// Wait for DOM to be fully loaded before initializing UI modules
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🎆 DOM Content Loaded - initializing UI modules');
+    console.log('🎆 Document ready state:', document.readyState);
+    console.log('🎆 initKeyboard function available:', typeof initKeyboard);
+    debugDOMState();
+    
+    try {
+        console.log('🎹 About to call initKeyboard()...');
+        const keyboardResult = initKeyboard();
+        console.log('🎹 initKeyboard() returned:', keyboardResult);
+        window.keyboardInit = keyboardResult;
+        console.log('✅ Keyboard module initialized:', !!window.keyboardInit);
+        
+        console.log('📎 About to call initializeClipboardUtils...');
+        initializeClipboardUtils(showMessage, clipboardSecuritySettings);
+        console.log('✅ Clipboard utilities initialized');
+        
+        console.log('🎉 UI modules initialization completed successfully');
+        
+        // Test if window.keyboardInit has the expected methods
+        if (window.keyboardInit) {
+            console.log('🔍 keyboardInit methods:', Object.keys(window.keyboardInit));
+        }
+        
+    } catch (error) {
+        console.error('❌ UI module initialization failed:', error);
+        console.error('Stack trace:', error.stack);
+    }
+});
 
 // Start waiting for Tauri
 waitForTauri();
@@ -165,9 +275,6 @@ function showNetworkWarningWithOfflineOption() {
 
 function enableOfflineMode() {
     isOfflineMode = true;
-
-    // Load clipboard settings
-    importedLoadClipboardSettings();
 
     // Initialize clipboard utilities with showMessage function
     initializeClipboardUtils(showMessage, clipboardSecuritySettings);
@@ -359,73 +466,11 @@ function setupEventListeners() {
         fileInfoBtn.addEventListener('click', showFileInfo);
     }
     
-    // Virtual keyboard buttons
-    document.querySelectorAll('.keyboard-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const targetId = this.dataset.target;
-            const isPassword = this.dataset.password === 'true';
-            if (window.keyboardInit && window.keyboardInit.openVirtualKeyboard) {
-                window.keyboardInit.openVirtualKeyboard(targetId, isPassword);
-            } else {
-                console.warn('Keyboard module not initialized yet');
-            }
-        });
-    });
-    
-    // Virtual keyboard modal events
-    const closeKeyboard = document.getElementById('close-keyboard');
-    const keyboardCancel = document.getElementById('keyboard-cancel');
-    const keyboardOk = document.getElementById('keyboard-ok');
-    
-    if (closeKeyboard) {
-        closeKeyboard.addEventListener('click', () => {
-            if (window.keyboardInit && window.keyboardInit.closeVirtualKeyboard) {
-                window.keyboardInit.closeVirtualKeyboard();
-            }
-        });
-    }
-    if (keyboardCancel) {
-        keyboardCancel.addEventListener('click', () => {
-            if (window.keyboardInit && window.keyboardInit.closeVirtualKeyboard) {
-                window.keyboardInit.closeVirtualKeyboard();
-            }
-        });
-    }
-    if (keyboardOk) {
-        keyboardOk.addEventListener('click', () => {
-            if (window.keyboardInit && window.keyboardInit.confirmKeyboardInput) {
-                window.keyboardInit.confirmKeyboardInput();
-            }
-        });
-    }
-    
-    // Virtual keyboard key events
-    document.querySelectorAll('.key-btn').forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (window.keyboardInit && window.keyboardInit.handleKeyboardInput) {
-                window.keyboardInit.handleKeyboardInput(button.dataset.key, button.dataset.shift);
-            }
-        });
-    });
-    
-    // Close modal when clicking outside
-    const modal = document.getElementById('virtual-keyboard-modal');
-    if (modal) {
-        modal.addEventListener('click', function(e) {
-            if (e.target === modal) {
-                if (window.keyboardInit && window.keyboardInit.closeVirtualKeyboard) {
-                    window.keyboardInit.closeVirtualKeyboard();
-                }
-            }
-        });
-    }
-    
-    // Input validation
+    // Input validation setup
     const inputs = [
         'seed-phrase-input',
         'encrypt-passphrase1',
-        'encrypt-passphrase2',
+        'encrypt-passphrase2', 
         'encrypt-password1',
         'encrypt-password2',
         'decrypt-content',
@@ -475,59 +520,7 @@ function setupEventListeners() {
             }
         });
     }
-    
-    // Virtual keyboard events
-    document.addEventListener('keydown', function(event) {
-        // Only handle keyboard events when virtual keyboard is open and target is seed phrase field
-        if (!virtualKeyboard.isOpen || !virtualKeyboard.targetInput || 
-            virtualKeyboard.targetInput.id !== 'seed-phrase-input') {
-            return;
-        }
-        
-        const suggestionsContainer = document.getElementById('seed-phrase-suggestions');
-        if (!suggestionsContainer || suggestionsContainer.classList.contains('hidden')) {
-            return;
-        }
-        
-        const suggestionItems = suggestionsContainer.querySelectorAll('.suggestion-item');
-        if (suggestionItems.length === 0) return;
-        
-        switch (event.key) {
-            case 'ArrowDown':
-                event.preventDefault();
-                virtualKeyboard.suggestionIndex = Math.min(
-                    virtualKeyboard.suggestionIndex + 1, 
-                    suggestionItems.length - 1
-                );
-                updateSuggestionSelection(suggestionItems);
-                break;
-                
-            case 'ArrowUp':
-                event.preventDefault();
-                virtualKeyboard.suggestionIndex = Math.max(
-                    virtualKeyboard.suggestionIndex - 1, 
-                    -1
-                );
-                updateSuggestionSelection(suggestionItems);
-                break;
-                
-            case 'Enter':
-            case 'Tab':
-                event.preventDefault();
-                if (virtualKeyboard.suggestionIndex >= 0 && 
-                    virtualKeyboard.suggestionIndex < suggestionItems.length) {
-                    const selectedWord = suggestionItems[virtualKeyboard.suggestionIndex].textContent;
-                    selectSeedPhraseSuggestion(selectedWord);
-                }
-                break;
-                
-            case 'Escape':
-                event.preventDefault();
-                hideSeedPhraseSuggestions();
-                break;
-        }
-    });
-    
+
     // Auto-copy seed phrase to main content
     const seedPhraseInput = document.getElementById('seed-phrase-input');
     if (seedPhraseInput) {
@@ -1304,20 +1297,6 @@ function createFileInfoModal(walletInfo) {
     modal.classList.remove('hidden');
 }
 
-// Import UI modules
-import { init as initKeyboard } from './ui/keyboard.js';
-import { init as initClipboard } from './ui/clipboard.js';
-
-// Import validation utilities
-import { isSeedPhraseField, containsSeedPhraseWords, validateSeedPhrase, validateSeedPhraseStructure, formatSeedPhrase, updateValidationStatus, validateSeedPhraseComprehensive } from './utils/validation.js';
-
-// Wait for DOM to be fully loaded before initializing UI modules
-document.addEventListener('DOMContentLoaded', () => {
-    // Initialize UI modules after DOM is ready
-    window.keyboardInit = initKeyboard();
-    window.clipboardInit = initClipboard();
-});
-
 // Security Reminder System
 let securityConfig = {
     showFirstTimeGuide: true,
@@ -1545,57 +1524,6 @@ function showPostDecryptionReminder() {
             reminder.remove();
         }
     }, 30000);
-}
-
-function showMessage(message, type = 'info') {
-    console.log(`Message (${type}):`, message);
-
-    // Create or update message display
-    let messageDiv = document.getElementById('app-message');
-    if (!messageDiv) {
-        messageDiv = document.createElement('div');
-        messageDiv.id = 'app-message';
-        messageDiv.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 12px 16px;
-            border-radius: 6px;
-            z-index: 10000;
-            max-width: 300px;
-            font-size: 14px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        `;
-        document.body.appendChild(messageDiv);
-    }
-
-    messageDiv.textContent = message;
-
-    // Style based on type
-    switch (type) {
-        case 'success':
-            messageDiv.style.backgroundColor = '#d4edda';
-            messageDiv.style.color = '#155724';
-            messageDiv.style.border = '1px solid #c3e6cb';
-            break;
-        case 'error':
-            messageDiv.style.backgroundColor = '#f8d7da';
-            messageDiv.style.color = '#721c24';
-            messageDiv.style.border = '1px solid #f5c6cb';
-            break;
-        case 'info':
-        default:
-            messageDiv.style.backgroundColor = '#d1ecf1';
-            messageDiv.style.color = '#0c5460';
-            messageDiv.style.border = '1px solid #bee5eb';
-    }
-
-    // Auto-hide after 4 seconds
-    setTimeout(() => {
-        if (messageDiv && messageDiv.parentNode) {
-            messageDiv.parentNode.removeChild(messageDiv);
-        }
-    }, 4000);
 }
 
 // Function to update main Save To File button with suggested filename

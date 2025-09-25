@@ -49,16 +49,24 @@ export function validateSeedPhraseStructure(seedPhrase) {
         };
     }
 
-    // Check if all words are in BIP39 wordlist
-    const invalidWords = words.filter(word => !window.bip39Words?.includes(word.toLowerCase()));
-    if (invalidWords.length > 0) {
+    // Check if BIP39 wordlist is available
+    if (!window.bip39Words || window.bip39Words.length === 0) {
         return {
             isValid: false,
-            message: `Invalid words: ${invalidWords.join(', ')}`
+            message: `${wordCount} words detected. BIP39 wordlist loading... Please wait.`
         };
     }
 
-    return { isValid: true, message: `${wordCount} words detected - basic validation passed` };
+    // Check if all words are in BIP39 wordlist
+    const invalidWords = words.filter(word => !window.bip39Words.includes(word.toLowerCase()));
+    if (invalidWords.length > 0) {
+        return {
+            isValid: false,
+            message: `Invalid BIP39 words: ${invalidWords.slice(0, 3).join(', ')}${invalidWords.length > 3 ? ` (+${invalidWords.length - 3} more)` : ''}`
+        };
+    }
+
+    return { isValid: true, message: `\u2705 Valid ${wordCount}-word BIP39 seed phrase` };
 }
 
 /**
@@ -83,9 +91,18 @@ export function formatSeedPhrase(seedPhrase) {
  * @param {string} message - Validation message to display
  */
 export function updateValidationStatus(statusId, isValid, message) {
+    const statusContainer = document.getElementById('seed-phrase-validation-status');
     const statusIcon = document.getElementById('seed-phrase-status-icon');
     const statusMessage = document.getElementById('seed-phrase-status-message');
     const statusDetails = document.getElementById('seed-phrase-status-details');
+
+    // Show the validation status container
+    if (statusContainer) {
+        statusContainer.classList.remove('hidden');
+        // Apply validation state classes
+        statusContainer.classList.remove('valid', 'invalid');
+        statusContainer.classList.add(isValid ? 'valid' : 'invalid');
+    }
 
     if (statusIcon) {
         statusIcon.textContent = isValid ? '✅' : '❌';
@@ -107,16 +124,30 @@ export function updateValidationStatus(statusId, isValid, message) {
  */
 export function validateSeedPhrase() {
     const element = document.getElementById('seed-phrase-input');
+    const statusContainer = document.getElementById('seed-phrase-validation-status');
+    
     if (!element) return;
 
     const seedPhrase = element.value.trim();
+    
+    // Hide validation status if input is empty
     if (!seedPhrase) {
-        updateValidationStatus('seed-phrase-input', false, 'Please enter a seed phrase');
+        if (statusContainer) {
+            statusContainer.classList.add('hidden');
+        }
         return;
     }
 
     const result = validateSeedPhraseStructure(seedPhrase);
     updateValidationStatus('seed-phrase-input', result.isValid, result.message);
+
+    // If BIP39 wordlist is not loaded yet and we have words, retry after a delay
+    if (!result.isValid && (!window.bip39Words || window.bip39Words.length === 0) && seedPhrase.split(/\s+/).length >= 3) {
+        setTimeout(() => {
+            const retryResult = validateSeedPhraseStructure(element.value.trim());
+            updateValidationStatus('seed-phrase-input', retryResult.isValid, retryResult.message);
+        }, 2000); // Retry after 2 seconds
+    }
 }
 
 export async function validateSeedPhraseComprehensive(seedPhrase) {
