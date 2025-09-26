@@ -11,12 +11,14 @@ pub mod diceware;
 pub mod seed_phrase;
 pub mod network;
 pub mod bip39_wordlist;
+pub mod address_generation;
 
 use crypto::*;
 use diceware::*;
 use seed_phrase::*;
 use network::*;
 use bip39_wordlist::*;
+use address_generation::*;
 
 #[derive(Error, Debug)]
 pub enum AppError {
@@ -786,6 +788,40 @@ async fn export_integrity_hash(
     Ok(export_data)
 }
 
+// Address generation functions using stable Rust crypto libraries
+
+#[tauri::command]
+async fn generate_single_address(
+    seed_phrase: String,
+    blockchain: String,
+    address_type: Option<String>,
+) -> Result<GeneratedAddress, AppError> {
+    address_generation::generate_single_address(seed_phrase, blockchain, address_type).await
+}
+
+#[tauri::command]
+async fn generate_multi_chain_addresses(
+    seed_phrase: String,
+    selected_blockchains: Vec<(String, Option<String>)>,
+) -> Result<AddressGenerationResult, AppError> {
+    address_generation::generate_multi_chain_addresses(seed_phrase, selected_blockchains).await
+}
+
+#[tauri::command]
+fn get_supported_blockchains() -> Vec<BlockchainConfig> {
+    address_generation::get_supported_blockchains()
+}
+
+#[tauri::command]
+fn get_bitcoin_address_types() -> Vec<String> {
+    address_generation::get_bitcoin_address_types()
+}
+
+#[tauri::command]
+fn get_default_derivation_path(blockchain: String, address_type: Option<String>) -> String {
+    address_generation::get_default_derivation_path(&blockchain, address_type.as_deref())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Load EFF wordlist
@@ -823,7 +859,13 @@ pub fn run() {
             encrypt_with_advanced_crypto,
             verify_file_integrity,
             get_file_integrity_info,
-            export_integrity_hash
+            export_integrity_hash,
+            // Address generation using anychain Rust library
+            generate_single_address,
+            generate_multi_chain_addresses,
+            get_supported_blockchains,
+            get_bitcoin_address_types,
+            get_default_derivation_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

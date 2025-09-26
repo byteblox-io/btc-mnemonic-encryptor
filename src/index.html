@@ -6,6 +6,10 @@
   <link rel="stylesheet" href="styles.css" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Seed Phrase Shield</title>
+  <!-- Load multichain wallet library -->
+  <script type="module" src="./multichain-loader.js"></script>
+  <script src="./multichain-simple.js"></script>
+  <script src="./address_generation_multichain.js"></script>
 </head>
 
 <body>
@@ -71,6 +75,84 @@
           </div>
         </div>
 
+        <!-- Address Generation Section -->
+        <div id="address-generation-section" class="input-section hidden">
+          <div class="section-header">
+            <label class="section-title">🔍 Verify Seed Phrase - Generate Blockchain Addresses</label>
+          </div>
+          <p class="help-text">Generate wallet addresses for different blockchains to verify your seed phrase is correct</p>
+          
+          <!-- Security Warning -->
+          <div class="address-security-warning" style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+            <strong>🔐 Security Notice:</strong> Address generation is performed locally and securely. Private keys are generated temporarily in memory and immediately destroyed. No private keys are stored or transmitted.
+          </div>
+
+          <!-- Blockchain Selection -->
+          <div class="blockchain-selection">
+            <label class="field-label">Select Blockchain:</label>
+            <select id="blockchain-dropdown" class="select-field" style="width: 100%; margin-bottom: 15px;">
+              <option value="">Choose a blockchain...</option>
+              <option value="Bitcoin">Bitcoin (BTC) - Digital Gold</option>
+              <option value="Ethereum">Ethereum (ETH) - Smart Contracts</option>
+              <option value="TRON">TRON (TRX) - Fast & Low Cost</option>
+              <option value="BNB Smart Chain">BNB Smart Chain (BNB) - Binance Chain</option>
+              <option value="Polygon">Polygon (MATIC) - Ethereum L2</option>
+              <option value="Avalanche">Avalanche (AVAX) - Fast Consensus</option>
+              <option value="Arbitrum">Arbitrum (ARB) - Ethereum L2</option>
+              <option value="Optimism">Optimism (OP) - Ethereum L2</option>
+              <option value="Fantom">Fantom (FTM) - Fast & Secure</option>
+            </select>
+            <div id="selected-blockchains" class="selected-blockchains"></div>
+          </div>
+
+          <!-- Bitcoin Address Type Selection -->
+          <div id="bitcoin-address-types" class="input-field">
+            <label class="field-label">Bitcoin Address Types:</label>
+            <div class="address-type-options">
+              <label class="address-type-option">
+                <input type="checkbox" id="btc-native-segwit" value="NativeSegWit" checked>
+                <span class="address-type-info">
+                  <strong>Native SegWit (bc1...)</strong>
+                  <small>Recommended - Lower fees, modern format</small>
+                </span>
+              </label>
+              <label class="address-type-option">
+                <input type="checkbox" id="btc-segwit" value="SegWit">
+                <span class="address-type-info">
+                  <strong>SegWit (3...)</strong>
+                  <small>Compatible with older wallets</small>
+                </span>
+              </label>
+              <label class="address-type-option">
+                <input type="checkbox" id="btc-legacy" value="Legacy">
+                <span class="address-type-info">
+                  <strong>Legacy (1...)</strong>
+                  <small>Original Bitcoin format</small>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Generate Addresses Button -->
+          <div class="address-generation-actions">
+            <button id="generate-addresses-btn" class="primary-button" disabled>
+              🔗 Generate Addresses
+            </button>
+            <div id="address-generation-progress" class="progress-indicator hidden"></div>
+          </div>
+
+          <!-- Generated Addresses Display -->
+          <div id="generated-addresses-container" class="generated-addresses hidden">
+            <div class="result-header">
+              <label class="section-title">Generated Addresses</label>
+              <button id="copy-all-addresses-btn" class="secondary-button">
+                📋 Copy All
+              </button>
+            </div>
+            <div id="generated-addresses-list" class="addresses-list"></div>
+          </div>
+        </div>
+
         <div class="credentials-section">
           <div class="input-section">
             <div class="section-header">
@@ -99,6 +181,8 @@
                 </div>
               </div>
             </div>
+            <!-- Passphrase Validation -->
+            <div id="passphrase-validation" class="validation-box hidden"></div>
           </div>
 
           <div class="input-section">
@@ -123,6 +207,8 @@
                 </div>
               </div>
             </div>
+            <!-- Password Validation -->
+            <div id="password-validation" class="validation-box hidden"></div>
           </div>
         </div>
 

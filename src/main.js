@@ -297,10 +297,269 @@ function dismissNetworkWarning() {
 
 // Placeholder function for wallet label dialog
 function openWalletLabelDialog() {
-    showMessage('Wallet label feature coming soon!', 'info');
+    console.log('Opening wallet label dialog...');
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('wallet-label-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    const modal = document.createElement('div');
+    modal.id = 'wallet-label-modal';
+    modal.className = 'modal';
+    
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>🏷️ Create Wallet Label</h3>
+                <button id="close-wallet-label" class="close-btn">×</button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <div class="wallet-label-form">
+                    <div class="input-field" style="margin-bottom: 15px;">
+                        <label class="field-label">Wallet Label:</label>
+                        <input type="text" id="wallet-label-input" class="text-field" 
+                               placeholder="e.g., Main Wallet, Cold Storage, Trading Wallet" 
+                               maxlength="50" style="width: 100%;" />
+                        <small style="color: #666; font-size: 0.85em;">Choose a memorable name for this wallet (max 50 characters)</small>
+                    </div>
+                    
+                    <div class="input-field" style="margin-bottom: 15px;">
+                        <label class="field-label">Wallet Type:</label>
+                        <select id="wallet-type-select" class="select-field" style="width: 100%;">
+                            <option value="Main">Main Wallet</option>
+                            <option value="Cold">Cold Storage</option>
+                            <option value="Hot">Hot Wallet</option>
+                            <option value="Trading">Trading Wallet</option>
+                            <option value="Test">Test Wallet</option>
+                            <option value="Custom">Custom</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-field" id="custom-type-input" style="margin-bottom: 15px; display: none;">
+                        <label class="field-label">Custom Type:</label>
+                        <input type="text" id="wallet-custom-type" class="text-field" 
+                               placeholder="Enter custom wallet type" 
+                               maxlength="30" style="width: 100%;" />
+                    </div>
+                    
+                    <div class="wallet-info-preview" style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-top: 15px;">
+                        <h4>📝 Preview:</h4>
+                        <div id="filename-preview" style="font-family: monospace; color: #495057; word-break: break-all;">
+                            wallet_[label]_[type]_2025-09-26.bin
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding: 15px 20px; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between;">
+                <button id="cancel-wallet-label" class="secondary-button">Cancel</button>
+                <button id="create-wallet-label" class="primary-button" disabled>💾 Create & Encrypt</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.classList.remove('hidden');
+    
+    // Get form elements
+    const labelInput = document.getElementById('wallet-label-input');
+    const typeSelect = document.getElementById('wallet-type-select');
+    const customTypeInput = document.getElementById('wallet-custom-type');
+    const customTypeDiv = document.getElementById('custom-type-input');
+    const filenamePreview = document.getElementById('filename-preview');
+    const createBtn = document.getElementById('create-wallet-label');
+    
+    // Update filename preview
+    function updatePreview() {
+        const label = labelInput.value.trim().replace(/[^a-zA-Z0-9_-]/g, '_') || '[label]';
+        const type = typeSelect.value === 'Custom' ? 
+            (customTypeInput.value.trim().replace(/[^a-zA-Z0-9_-]/g, '_') || '[custom_type]') : 
+            typeSelect.value.toLowerCase();
+        const date = new Date().toISOString().split('T')[0];
+        const filename = `wallet_${label}_${type}_${date}.bin`;
+        filenamePreview.textContent = filename;
+        
+        // Enable create button if label is provided
+        const isValid = labelInput.value.trim().length > 0 && 
+                       (typeSelect.value !== 'Custom' || customTypeInput.value.trim().length > 0);
+        createBtn.disabled = !isValid;
+    }
+    
+    // Show/hide custom type input
+    typeSelect.addEventListener('change', function() {
+        if (this.value === 'Custom') {
+            customTypeDiv.style.display = 'block';
+            customTypeInput.required = true;
+        } else {
+            customTypeDiv.style.display = 'none';
+            customTypeInput.required = false;
+            customTypeInput.value = '';
+        }
+        updatePreview();
+    });
+    
+    // Update preview on input
+    labelInput.addEventListener('input', updatePreview);
+    customTypeInput.addEventListener('input', updatePreview);
+    
+    // Initial preview update
+    updatePreview();
+    
+    // Focus on label input
+    setTimeout(() => labelInput.focus(), 100);
+    
+    // Event listeners
+    document.getElementById('close-wallet-label').addEventListener('click', () => modal.remove());
+    document.getElementById('cancel-wallet-label').addEventListener('click', () => modal.remove());
+    
+    document.getElementById('create-wallet-label').addEventListener('click', async () => {
+        const label = labelInput.value.trim();
+        const walletType = typeSelect.value === 'Custom' ? customTypeInput.value.trim() : typeSelect.value;
+        
+        if (!label) {
+            showMessage('Please enter a wallet label', 'error');
+            return;
+        }
+        
+        if (typeSelect.value === 'Custom' && !customTypeInput.value.trim()) {
+            showMessage('Please enter a custom wallet type', 'error');
+            return;
+        }
+        
+        // Store wallet info for use in encryption
+        window.currentWalletInfo = {
+            label: label,
+            wallet_type: walletType,
+            created_at: new Date().toISOString()
+        };
+        
+        modal.remove();
+        
+        // Perform encryption with wallet info
+        await performEncryptionWithWalletLabel(window.currentWalletInfo);
+    });
+    
+    // Close modal when clicking outside
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
 }
 
 // Clipboard Security Functions - Now imported from utils/clipboard.js
+
+// Perform encryption with wallet label information
+async function performEncryptionWithWalletLabel(walletInfo) {
+    console.log('Performing encryption with wallet label:', walletInfo);
+    
+    if (!tauriAPI.invoke) {
+        showMessage('Tauri API not available', 'error');
+        return;
+    }
+    
+    const seedPhrase = getValue('seed-phrase-input');
+    const passphrase = getValue('encrypt-passphrase1');
+    const password = getValue('encrypt-password1') || ''; // Use empty string if not provided
+    
+    if (!seedPhrase || !passphrase) {
+        showMessage('Please fill all required fields', 'error');
+        return;
+    }
+    
+    try {
+        const encryptBtn = document.getElementById('encrypt-with-wallet-btn');
+        if (encryptBtn) {
+            encryptBtn.disabled = true;
+            encryptBtn.textContent = '🔄 Encrypting with Label...';
+        }
+        
+        setStatus('encrypt-status', 'Encrypting seed phrase with wallet label...', 'info');
+        
+        // Check if advanced crypto is enabled
+        const isAdvanced = document.getElementById('enable-advanced-crypto')?.checked || false;
+        let encrypted;
+        
+        if (isAdvanced) {
+            // Use advanced crypto with integrity verification and wallet info
+            const keyDerivationMethod = document.getElementById('key-derivation-method')?.value || 'pbkdf2';
+            const iterations = 100000; // Use default value
+            
+            // For advanced crypto, we need to call the regular advanced crypto command
+            // and then generate the wallet filename separately
+            encrypted = await tauriAPI.invoke('encrypt_with_advanced_crypto', {
+                request: {
+                    content: seedPhrase,
+                    passphrase: passphrase,
+                    password: password,
+                    key_derivation_method: keyDerivationMethod,
+                    iterations: iterations
+                }
+            });
+            
+            setValue('encrypt-result', encrypted.encrypted_content);
+            
+            // Show integrity info to user
+            showIntegrityInfo(encrypted.integrity_info);
+        } else {
+            // Use standard encryption with wallet info
+            const walletMetadata = {
+                label: walletInfo.label,
+                wallet_type: walletInfo.wallet_type,
+                created_at: new Date().toISOString(),
+                seed_phrase_word_count: null // Will be calculated by backend
+            };
+            
+            encrypted = await tauriAPI.invoke('encrypt_seed_phrase_with_wallet_metadata', {
+                seed_phrase: seedPhrase,
+                passphrase: passphrase,
+                password: password || null,
+                wallet_metadata: walletMetadata
+            });
+            
+            setValue('encrypt-result', encrypted.encrypted_content);
+            
+            // Update suggested filename from response
+            if (encrypted.suggested_filename) {
+                updateMainSaveButton(encrypted.suggested_filename);
+            }
+        }
+        
+        // Generate suggested filename
+        const label = walletInfo.label.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const walletTypeStr = typeof walletInfo.wallet_type === 'string' ? 
+            walletInfo.wallet_type.toLowerCase().replace(/[^a-zA-Z0-9_-]/g, '_') : 'wallet';
+        const date = new Date().toISOString().split('T')[0];
+        const suggestedFilename = `${label}_${walletTypeStr}_${date}.bin`;
+        
+        // Update save button with suggested filename
+        updateMainSaveButton(suggestedFilename);
+        
+        const saveBtn = document.getElementById('save-encrypted-btn');
+        if (saveBtn) {
+            saveBtn.disabled = false;
+        }
+        
+        setStatus('encrypt-status', 'Encryption with wallet label completed successfully', 'success');
+        showMessage(`Wallet "${walletInfo.label}" encrypted successfully!`, 'success');
+        
+        // Show post-encryption security reminder with wallet info
+        setTimeout(() => showPostEncryptionReminder(walletInfo), 1000);
+        
+    } catch (error) {
+        console.error('Encryption with wallet label failed:', error);
+        setValue('encrypt-result', '');
+        setStatus('encrypt-status', 'Encryption failed', 'error');
+        showMessage(`Encryption failed: ${error}`, 'error');
+    } finally {
+        const encryptBtn = document.getElementById('encrypt-with-wallet-btn');
+        if (encryptBtn) {
+            encryptBtn.disabled = false;
+            encryptBtn.textContent = '🏷️ Encrypt with Wallet Label';
+        }
+    }
+}
 
 function showPhysicalKeyboardWarning() {
     // Check if user has disabled this warning
@@ -494,6 +753,9 @@ function setupEventListeners() {
                     if (formatBtn) {
                         formatBtn.disabled = !this.value.trim();
                     }
+                    
+                    // Update address generation visibility based on seed phrase validity
+                    updateAddressGenerationVisibility();
                 });
             }
         }
@@ -526,6 +788,9 @@ function setupEventListeners() {
     if (seedPhraseInput) {
         seedPhraseInput.addEventListener('input', autoCopySeedPhrase);
     }
+    
+    // Initialize address generation functionality
+    initializeAddressGeneration();
     
     console.log('Event listeners setup complete');
 }
@@ -570,25 +835,28 @@ function validateEncryptForm() {
     const password1 = getValue('encrypt-password1');
     const password2 = getValue('encrypt-password2');
     
-    // Collect validation messages
-    const validationMessages = [];
-    
     // Passphrase validation (required)
     const isPassphraseValid = passphrase1 && passphrase1 === passphrase2;
+    const passphraseMessages = [];
     if (passphrase1 && passphrase2 && !isPassphraseValid) {
-        validationMessages.push('⚠️ Passphrases do not match');
+        passphraseMessages.push('⚠️ Passphrases do not match');
     }
     
     // Password validation (optional) - if provided, both fields must match
     const isPasswordValid = !password1 || (password1 && password1 === password2);
+    const passwordMessages = [];
     if (password1 && password2 && !isPasswordValid) {
-        validationMessages.push('⚠️ Passwords do not match');
+        passwordMessages.push('⚠️ Passwords do not match');
     }
     
     const isValid = seedPhrase && isPassphraseValid && isPasswordValid;
     
-    // Update validation display
-    updateValidationDisplay('encrypt-validation', validationMessages);
+    // Update validation displays in their respective sections
+    updateValidationDisplay('passphrase-validation', passphraseMessages);
+    updateValidationDisplay('password-validation', passwordMessages);
+    
+    // Clear the general validation box since we're using section-specific ones
+    updateValidationDisplay('encrypt-validation', []);
     
     const encryptBtn = document.getElementById('encrypt-btn');
     const encryptWithWalletBtn = document.getElementById('encrypt-with-wallet-btn');
@@ -1575,3 +1843,491 @@ function updateMainSaveButton(suggestedFilename) {
 }
 
 console.log('Enhanced main.js loaded successfully');
+
+// Address Generation Functions
+function initializeAddressGeneration() {
+    const generateBtn = document.getElementById('generate-addresses-btn');
+    const copyAllBtn = document.getElementById('copy-all-addresses-btn');
+    const blockchainDropdown = document.getElementById('blockchain-dropdown');
+    const bitcoinAddressTypes = document.getElementById('bitcoin-address-types');
+    
+    // Initialize selected blockchains display (empty by default)
+    const selectedBlockchainsDiv = document.getElementById('selected-blockchains');
+    if (selectedBlockchainsDiv) {
+        selectedBlockchainsDiv.innerHTML = ''; // No default selection
+        
+        // Setup event delegation for remove buttons
+        selectedBlockchainsDiv.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-blockchain')) {
+                e.target.parentElement.remove();
+                updateBitcoinAddressTypesVisibility();
+            }
+        });
+    }
+    
+    // Initialize Bitcoin address types as hidden by default
+    if (bitcoinAddressTypes) {
+        bitcoinAddressTypes.style.display = 'none';
+    }
+    
+    // Show/hide Bitcoin address types based on Bitcoin selection
+    if (blockchainDropdown && bitcoinAddressTypes) {
+        blockchainDropdown.addEventListener('change', function() {
+            updateSelectedBlockchains();
+            const selectedBlockchains = getSelectedBlockchainsFromList();
+            const hasBitcoin = selectedBlockchains.some(([blockchain]) => blockchain === 'Bitcoin');
+            bitcoinAddressTypes.style.display = hasBitcoin ? 'block' : 'none';
+        });
+    }
+    
+    // Generate addresses button
+    if (generateBtn) {
+        generateBtn.addEventListener('click', generateAddresses);
+    }
+    
+    // Copy all addresses button
+    if (copyAllBtn) {
+        copyAllBtn.addEventListener('click', copyAllAddresses);
+    }
+}
+
+function updateSelectedBlockchains() {
+    const dropdown = document.getElementById('blockchain-dropdown');
+    const selectedDiv = document.getElementById('selected-blockchains');
+    
+    if (!dropdown || !selectedDiv || !dropdown.value) return;
+    
+    const selectedValue = dropdown.value;
+    const selectedText = dropdown.options[dropdown.selectedIndex].text;
+    
+    // Check if already selected
+    const existing = selectedDiv.querySelector(`[data-blockchain="${selectedValue}"]`);
+    if (existing) {
+        dropdown.value = ''; // Reset dropdown
+        return;
+    }
+    
+    // Add new blockchain
+    const blockchainItem = document.createElement('div');
+    blockchainItem.className = 'selected-blockchain';
+    blockchainItem.innerHTML = `
+        ${selectedText}
+        <button class="remove-blockchain" data-blockchain="${selectedValue}">×</button>
+    `;
+    
+    selectedDiv.appendChild(blockchainItem);
+    
+    // Add remove event listener
+    blockchainItem.querySelector('.remove-blockchain').addEventListener('click', function() {
+        blockchainItem.remove();
+        updateBitcoinAddressTypesVisibility();
+    });
+    
+    dropdown.value = ''; // Reset dropdown
+    updateBitcoinAddressTypesVisibility();
+}
+
+function updateBitcoinAddressTypesVisibility() {
+    const selectedBlockchains = getSelectedBlockchainsFromList();
+    const bitcoinAddressTypes = document.getElementById('bitcoin-address-types');
+    const hasBitcoin = selectedBlockchains.some(([blockchain]) => blockchain === 'Bitcoin');
+    
+    if (bitcoinAddressTypes) {
+        bitcoinAddressTypes.style.display = hasBitcoin ? 'block' : 'none';
+    }
+}
+
+function getSelectedBlockchainsFromList() {
+    const selectedDiv = document.getElementById('selected-blockchains');
+    if (!selectedDiv) return [];
+    
+    const blockchains = [];
+    const items = selectedDiv.querySelectorAll('.selected-blockchain');
+    
+    items.forEach(item => {
+        const removeBtn = item.querySelector('.remove-blockchain');
+        const blockchainValue = removeBtn.getAttribute('data-blockchain');
+        
+        if (blockchainValue === 'Bitcoin') {
+            const selectedBitcoinTypes = getSelectedBitcoinAddressTypes();
+            for (const addressType of selectedBitcoinTypes) {
+                blockchains.push([blockchainValue, addressType]);
+            }
+        } else {
+            blockchains.push([blockchainValue, null]);
+        }
+    });
+    
+    return blockchains;
+}
+
+function updateAddressGenerationVisibility() {
+    const seedPhraseInput = document.getElementById('seed-phrase-input');
+    const addressSection = document.getElementById('address-generation-section');
+    const generateBtn = document.getElementById('generate-addresses-btn');
+    
+    if (!seedPhraseInput || !addressSection || !generateBtn) return;
+    
+    const seedPhrase = seedPhraseInput.value.trim();
+    
+    if (seedPhrase) {
+        // Check if seed phrase is valid
+        validateSeedPhraseForAddressGeneration(seedPhrase).then(isValid => {
+            if (isValid) {
+                addressSection.classList.remove('hidden');
+                generateBtn.disabled = false;
+            } else {
+                addressSection.classList.add('hidden');
+                generateBtn.disabled = true;
+            }
+        });
+    } else {
+        addressSection.classList.add('hidden');
+        generateBtn.disabled = true;
+    }
+}
+
+// Detect blockchain from address pattern and auto-select
+function detectAndSelectBlockchain(input) {
+    // Skip if input looks like a valid seed phrase (multiple words)
+    const words = input.split(/\s+/).filter(word => word.length > 0);
+    if (words.length >= 12) {
+        return; // This is likely a seed phrase, not an address
+    }
+    
+    // Skip if input is too short to be an address
+    if (input.length < 20) {
+        return;
+    }
+    
+    let detectedBlockchain = null;
+    let detectedAddressType = null;
+    
+    // Bitcoin address patterns
+    if (/^1[A-HJ-NP-Z1-9]{25,34}$/.test(input)) {
+        detectedBlockchain = 'Bitcoin';
+        detectedAddressType = 'Legacy';
+    } else if (/^3[A-HJ-NP-Z1-9]{25,34}$/.test(input)) {
+        detectedBlockchain = 'Bitcoin';
+        detectedAddressType = 'SegWit';
+    } else if (/^bc1[a-z0-9]{39,59}$/.test(input)) {
+        detectedBlockchain = 'Bitcoin';
+        detectedAddressType = 'NativeSegWit';
+    }
+    // Ethereum and EVM-compatible addresses
+    else if (/^0x[a-fA-F0-9]{40}$/.test(input)) {
+        detectedBlockchain = 'Ethereum'; // Default to Ethereum for 0x addresses
+    }
+    // TRON addresses
+    else if (/^T[A-Za-z1-9]{33}$/.test(input)) {
+        detectedBlockchain = 'TRON';
+    }
+    // Solana addresses
+    else if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(input) && !input.startsWith('0x') && !input.startsWith('T') && !input.startsWith('1') && !input.startsWith('3') && !input.startsWith('bc1')) {
+        detectedBlockchain = 'Solana';
+    }
+    
+    if (detectedBlockchain) {
+        console.log(`Detected ${detectedBlockchain} address${detectedAddressType ? ` (${detectedAddressType})` : ''}: ${input}`);
+        
+        // Auto-select the detected blockchain
+        const dropdown = document.getElementById('blockchain-dropdown');
+        if (dropdown) {
+            // Find the option value that matches the detected blockchain
+            for (let option of dropdown.options) {
+                if (option.value === detectedBlockchain) {
+                    dropdown.value = detectedBlockchain;
+                    // Trigger the change event to add it to selected blockchains
+                    updateSelectedBlockchains();
+                    
+                    // If Bitcoin with specific address type, select that type
+                    if (detectedBlockchain === 'Bitcoin' && detectedAddressType) {
+                        setTimeout(() => {
+                            const checkboxes = {
+                                'Legacy': document.getElementById('btc-legacy'),
+                                'SegWit': document.getElementById('btc-segwit'),
+                                'NativeSegWit': document.getElementById('btc-native-segwit')
+                            };
+                            
+                            // Uncheck all Bitcoin address types first
+                            Object.values(checkboxes).forEach(checkbox => {
+                                if (checkbox) checkbox.checked = false;
+                            });
+                            
+                            // Check only the detected type
+                            if (checkboxes[detectedAddressType]) {
+                                checkboxes[detectedAddressType].checked = true;
+                            }
+                        }, 100);
+                    }
+                    
+                    showMessage(`Detected ${detectedBlockchain}${detectedAddressType ? ` (${detectedAddressType})` : ''} address - auto-selected blockchain`, 'success');
+                    break;
+                }
+            }
+        }
+        
+        // Auto-generate address if this looks like a single address input
+        setTimeout(() => {
+            const generateBtn = document.getElementById('generate-addresses-btn');
+            if (generateBtn && !generateBtn.disabled) {
+                generateBtn.click();
+            }
+        }, 500);
+    }
+}
+
+async function validateSeedPhraseForAddressGeneration(seedPhrase) {
+    try {
+        const result = await tauriAPI.invoke('validate_seed_phrase', { seedPhrase });
+        return result.is_valid;
+    } catch (error) {
+        console.error('Error validating seed phrase for address generation:', error);
+        return false;
+    }
+}
+
+async function generateAddresses() {
+    const seedPhraseInput = document.getElementById('seed-phrase-input');
+    const generateBtn = document.getElementById('generate-addresses-btn');
+    const progressIndicator = document.getElementById('address-generation-progress');
+    const addressesContainer = document.getElementById('generated-addresses-container');
+    
+    if (!seedPhraseInput || !generateBtn) return;
+    
+    const seedPhrase = seedPhraseInput.value.trim();
+    if (!seedPhrase) {
+        showMessage('Please enter a valid seed phrase first', 'error');
+        return;
+    }
+    
+    // Get selected blockchains and address types
+    const selectedBlockchains = getSelectedBlockchains();
+    if (selectedBlockchains.length === 0) {
+        showMessage('Please select at least one blockchain', 'error');
+        return;
+    }
+    
+    // Check if Tauri API is available
+    if (!tauriAPI.invoke) {
+        showMessage('Tauri API not available. Please ensure the application is running in Tauri environment.', 'error');
+        console.error('tauriAPI object:', tauriAPI);
+        console.error('tauriAPI.invoke:', tauriAPI.invoke);
+        return;
+    }
+    
+    try {
+        generateBtn.disabled = true;
+        generateBtn.textContent = '🔄 Generating...';
+        progressIndicator.classList.remove('hidden');
+        
+        // Use Rust backend with anychain library for real address generation
+        console.log('Generating addresses for blockchains:', selectedBlockchains);
+        console.log('Using seed phrase:', seedPhrase.substring(0, 20) + '...');
+        
+        // Generate addresses using Rust backend with anychain library
+        const result = await tauriAPI.invoke('generate_multi_chain_addresses', {
+            seedPhrase: seedPhrase,
+            selectedBlockchains: selectedBlockchains
+        });
+        
+        console.log('Generated addresses result:', result);
+        
+        // Display the generated addresses
+        displayGeneratedAddresses(result);
+        addressesContainer.classList.remove('hidden');
+        
+        showMessage(`Successfully generated ${result.addresses.length} addresses`, 'success');
+        
+    } catch (error) {
+        console.error('Error generating addresses:', error);
+        console.error('Error type:', typeof error);
+        console.error('Error message:', error?.message);
+        console.error('Error stack:', error?.stack);
+        
+        let errorMessage = 'Unknown error';
+        if (error && typeof error === 'object') {
+            if (error.message) {
+                errorMessage = error.message;
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            } else {
+                errorMessage = JSON.stringify(error);
+            }
+        } else if (typeof error === 'string') {
+            errorMessage = error;
+        }
+        
+        showMessage(`Failed to generate addresses: ${errorMessage}`, 'error');
+    } finally {
+        generateBtn.disabled = false;
+        generateBtn.textContent = '🔗 Generate Addresses';
+        progressIndicator.classList.add('hidden');
+    }
+}
+
+function getSelectedBlockchains() {
+    return getSelectedBlockchainsFromList();
+}
+
+function getSelectedBitcoinAddressTypes() {
+    const addressTypes = [];
+    
+    const nativeSegwitCheckbox = document.getElementById('btc-native-segwit');
+    if (nativeSegwitCheckbox && nativeSegwitCheckbox.checked) {
+        addressTypes.push('NativeSegWit');
+    }
+    
+    const segwitCheckbox = document.getElementById('btc-segwit');
+    if (segwitCheckbox && segwitCheckbox.checked) {
+        addressTypes.push('SegWit');
+    }
+    
+    const legacyCheckbox = document.getElementById('btc-legacy');
+    if (legacyCheckbox && legacyCheckbox.checked) {
+        addressTypes.push('Legacy');
+    }
+    
+    return addressTypes.length > 0 ? addressTypes : ['NativeSegWit']; // Default to NativeSegWit
+}
+
+function displayGeneratedAddresses(result) {
+    const addressesList = document.getElementById('generated-addresses-list');
+    if (!addressesList) return;
+    
+    addressesList.innerHTML = '';
+    
+    result.addresses.forEach((address, index) => {
+        const addressCard = createAddressCard(address, index);
+        addressesList.appendChild(addressCard);
+    });
+    
+    // Add event listeners for copy and QR code buttons
+    attachAddressButtonListeners();
+}
+
+function attachAddressButtonListeners() {
+    // Copy address buttons
+    document.querySelectorAll('.copy-address-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const address = this.getAttribute('data-address');
+            const index = this.getAttribute('data-index');
+            copyAddressToClipboard(address, parseInt(index));
+        });
+    });
+}
+
+function createAddressCard(address, index) {
+    const card = document.createElement('div');
+    card.className = 'address-card';
+    card.id = `address-card-${index}`;
+    
+    const blockchainName = getBlockchainDisplayName(address.blockchain, address.address_type);
+    const blockchainIcon = getBlockchainIcon(address.blockchain);
+    
+    card.innerHTML = `
+        <div class="address-header">
+            <div class="address-title">
+                <div class="blockchain-icon ${address.blockchain.toLowerCase()}">${blockchainIcon}</div>
+                <span>${blockchainName}</span>
+            </div>
+        </div>
+        <div class="address-content">
+            <div class="address-field">
+                <div class="address-label">Address:</div>
+                <div class="address-value" id="address-value-${index}">${address.address}</div>
+                <div class="address-derivation">Path: ${address.derivation_path}</div>
+            </div>
+            <div class="address-actions">
+                <button class="copy-address-btn" data-address="${address.address}" data-index="${index}">
+                    📋 Copy
+                </button>
+            </div>
+        </div>
+    `;
+    
+    return card;
+}
+
+function getBlockchainDisplayName(blockchain, addressType) {
+    if (blockchain === 'Bitcoin' && addressType) {
+        switch (addressType) {
+            case 'Legacy': return 'Bitcoin (Legacy)';
+            case 'SegWit': return 'Bitcoin (SegWit)';
+            case 'NativeSegWit': return 'Bitcoin (Native SegWit)';
+            default: return 'Bitcoin';
+        }
+    }
+    return blockchain;
+}
+
+function getBlockchainIcon(blockchain) {
+    switch (blockchain) {
+        case 'Bitcoin': return '₿';
+        case 'Ethereum': return 'Ξ';
+        case 'Tron': return 'T';
+        case 'Solana': return 'S';
+        default: return '🔗';
+    }
+}
+
+async function copyAddressToClipboard(address, index) {
+    try {
+        await navigator.clipboard.writeText(address);
+        
+        // Visual feedback
+        const button = document.querySelector(`#address-card-${index} .copy-address-btn`);
+        if (button) {
+            const originalText = button.textContent;
+            button.textContent = '✅ Copied!';
+            button.style.background = '#28a745';
+            
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.style.background = '';
+            }, 2000);
+        }
+        
+        showMessage('Address copied to clipboard', 'success');
+    } catch (error) {
+        console.error('Failed to copy address:', error);
+        showMessage('Failed to copy address', 'error');
+    }
+}
+
+async function copyAllAddresses() {
+    const addressValues = document.querySelectorAll('.address-value');
+    if (addressValues.length === 0) {
+        showMessage('No addresses to copy', 'error');
+        return;
+    }
+    
+    const addresses = Array.from(addressValues).map((element, index) => {
+        const card = element.closest('.address-card');
+        const blockchainName = card.querySelector('.address-title span').textContent;
+        const derivationPath = card.querySelector('.address-derivation').textContent;
+        return `${blockchainName}:\n${element.textContent}\n${derivationPath}\n`;
+    }).join('\n');
+    
+    try {
+        await navigator.clipboard.writeText(addresses);
+        
+        // Visual feedback
+        const button = document.getElementById('copy-all-addresses-btn');
+        if (button) {
+            const originalText = button.textContent;
+            button.textContent = '✅ Copied All!';
+            button.style.background = '#28a745';
+            
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.style.background = '';
+            }, 2000);
+        }
+        
+        showMessage('All addresses copied to clipboard', 'success');
+    } catch (error) {
+        console.error('Failed to copy all addresses:', error);
+        showMessage('Failed to copy addresses', 'error');
+    }
+}
