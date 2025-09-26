@@ -593,6 +593,8 @@ button {
     border-left: 4px solid #dc3545;
     background: #f8d7da;
     color: #721c24;
+    font-size: 0.9rem;
+    line-height: 1.4;
 }
 
 .validation-box.hidden {
@@ -600,11 +602,27 @@ button {
 }
 
 .validation-error {
-    margin-bottom: 5px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .validation-error:last-child {
     margin-bottom: 0;
+}
+
+/* Validation tip styling for warnings and tips */
+.validation-box.tip {
+    border-left-color: #ffc107;
+    background: #fff3cd;
+    color: #856404;
+}
+
+.validation-box.success {
+    border-left-color: #28a745;
+    background: #d4edda;
+    color: #155724;
 }
 
 /* Progress Indicator */
@@ -964,6 +982,32 @@ button {
     font-size: 0.9rem;
     opacity: 0.9;
     line-height: 1.4;
+}
+
+/* Virtual Keyboard Enhancements */
+.editable-word {
+    user-select: none;
+    display: inline-block;
+}
+
+.editable-word:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.current-word {
+    user-select: none;
+    display: inline-block;
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+.cursor {
+    display: inline-block;
+    animation: blink 1s infinite;
 }
 
 /* Hidden utility */ */

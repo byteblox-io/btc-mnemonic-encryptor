@@ -13,7 +13,11 @@ export function init() {
         capsLock: false,
         currentWord: '',
         suggestions: [],
-        suggestionIndex: -1
+        suggestionIndex: -1,
+        // New properties for word editing
+        editingWordIndex: -1, // -1 means editing at the end, >= 0 means editing specific word
+        words: [], // Array of words for easier manipulation
+        cursorPosition: 0 // Position within the current word being edited
     };
 
     console.log('📝 Virtual keyboard state initialized');
@@ -113,6 +117,10 @@ export function init() {
         virtualKeyboard.currentWord = '';
         virtualKeyboard.suggestions = [];
         virtualKeyboard.suggestionIndex = -1;
+        // Reset word editing state
+        virtualKeyboard.editingWordIndex = -1;
+        virtualKeyboard.words = [];
+        virtualKeyboard.cursorPosition = 0;
 
         // Initialize current word properly
         updateCurrentWord();
@@ -181,7 +189,20 @@ export function init() {
 
     function confirmKeyboardInput() {
         if (virtualKeyboard.targetInput) {
-            virtualKeyboard.targetInput.value = virtualKeyboard.inputText;
+            let finalText;
+            
+            if (virtualKeyboard.isPasswordMode) {
+                // For password mode, use inputText directly
+                finalText = virtualKeyboard.inputText;
+            } else {
+                // For non-password mode, finish any ongoing word editing and build from words
+                if (virtualKeyboard.currentWord.trim()) {
+                    finishEditingWord();
+                }
+                finalText = virtualKeyboard.words.join(' ');
+            }
+            
+            virtualKeyboard.targetInput.value = finalText;
 
             // Trigger input event for validation
             const event = new Event('input', { bubbles: true });
@@ -193,72 +214,127 @@ export function init() {
     function handleKeyboardInput(key, shiftKey) {
         if (!virtualKeyboard.isOpen) return;
 
-        switch (key) {
-            case 'backspace':
-                if (virtualKeyboard.inputText.length > 0) {
-                    virtualKeyboard.inputText = virtualKeyboard.inputText.slice(0, -1);
-                    updateCurrentWord();
-                }
-                break;
+        if (virtualKeyboard.isPasswordMode) {
+            // Handle password mode differently (no word-based editing)
+            switch (key) {
+                case 'backspace':
+                    if (virtualKeyboard.inputText.length > 0) {
+                        virtualKeyboard.inputText = virtualKeyboard.inputText.slice(0, -1);
+                    }
+                    break;
 
-            case 'clear':
-                virtualKeyboard.inputText = '';
-                virtualKeyboard.currentWord = '';
-                virtualKeyboard.suggestions = [];
-                virtualKeyboard.suggestionIndex = -1;
-                hideSeedPhraseSuggestions(); // This will hide any suggestions (seed phrase or passphrase)
-                break;
+                case 'clear':
+                    virtualKeyboard.inputText = '';
+                    break;
 
-            case 'space':
-                virtualKeyboard.inputText += ' ';
-                virtualKeyboard.currentWord = '';
-                break;
+                case 'space':
+                    virtualKeyboard.inputText += ' ';
+                    break;
 
-            case 'shift':
-                virtualKeyboard.shiftPressed = !virtualKeyboard.shiftPressed;
-                updateKeyboardKeys();
-                return;
-
-            case 'caps':
-                virtualKeyboard.capsLock = !virtualKeyboard.capsLock;
-                updateKeyboardKeys();
-                return;
-
-            default:
-                let charToAdd = key;
-                if (virtualKeyboard.shiftPressed || virtualKeyboard.capsLock) {
-                    charToAdd = shiftKey || key.toUpperCase();
-                    virtualKeyboard.shiftPressed = false;
+                case 'shift':
+                    virtualKeyboard.shiftPressed = !virtualKeyboard.shiftPressed;
                     updateKeyboardKeys();
-                }
-                virtualKeyboard.inputText += charToAdd;
-                updateCurrentWord();
-                break;
+                    return;
+
+                case 'caps':
+                    virtualKeyboard.capsLock = !virtualKeyboard.capsLock;
+                    updateKeyboardKeys();
+                    return;
+
+                default:
+                    let charToAdd = key;
+                    if (virtualKeyboard.shiftPressed || virtualKeyboard.capsLock) {
+                        charToAdd = shiftKey || key.toUpperCase();
+                        virtualKeyboard.shiftPressed = false;
+                        updateKeyboardKeys();
+                    }
+                    virtualKeyboard.inputText += charToAdd;
+                    break;
+            }
+        } else {
+            // Handle non-password mode (word-based editing)
+            switch (key) {
+                case 'backspace':
+                    if (virtualKeyboard.currentWord.length > 0) {
+                        virtualKeyboard.currentWord = virtualKeyboard.currentWord.slice(0, -1);
+                    } else if (virtualKeyboard.editingWordIndex === -1 && virtualKeyboard.words.length > 0) {
+                        // If no current word and at the end, start editing the last word
+                        editWord(virtualKeyboard.words.length - 1);
+                        virtualKeyboard.currentWord = virtualKeyboard.currentWord.slice(0, -1);
+                    }
+                    updateCurrentWord();
+                    break;
+
+                case 'clear':
+                    if (virtualKeyboard.editingWordIndex >= 0) {
+                        // Clear the current word being edited
+                        virtualKeyboard.currentWord = '';
+                    } else {
+                        // Clear everything
+                        virtualKeyboard.inputText = '';
+                        virtualKeyboard.words = [];
+                        virtualKeyboard.currentWord = '';
+                    }
+                    virtualKeyboard.suggestions = [];
+                    virtualKeyboard.suggestionIndex = -1;
+                    hideSeedPhraseSuggestions();
+                    break;
+
+                case 'space':
+                    if (virtualKeyboard.currentWord.trim()) {
+                        finishEditingWord();
+                    }
+                    break;
+
+                case 'shift':
+                    virtualKeyboard.shiftPressed = !virtualKeyboard.shiftPressed;
+                    updateKeyboardKeys();
+                    return;
+
+                case 'caps':
+                    virtualKeyboard.capsLock = !virtualKeyboard.capsLock;
+                    updateKeyboardKeys();
+                    return;
+
+                default:
+                    let charToAdd = key;
+                    if (virtualKeyboard.shiftPressed || virtualKeyboard.capsLock) {
+                        charToAdd = shiftKey || key.toUpperCase();
+                        virtualKeyboard.shiftPressed = false;
+                        updateKeyboardKeys();
+                    }
+                    virtualKeyboard.currentWord += charToAdd;
+                    updateCurrentWord();
+                    break;
+            }
         }
 
         updateKeyboardDisplay();
 
-        // Update suggestions based on field type
-        const isSeedPhraseField = virtualKeyboard.targetInput &&
-                               virtualKeyboard.targetInput.id === 'seed-phrase-input';
-        const isPassphraseField = virtualKeyboard.targetInput &&
-                               virtualKeyboard.targetInput.id.includes('passphrase');
-        
-        if (isSeedPhraseField) {
-            updateSeedPhraseSuggestions();
-        } else if (isPassphraseField) {
-            updatePassphraseSuggestions();
+        // Update suggestions based on field type (only for non-password mode)
+        if (!virtualKeyboard.isPasswordMode) {
+            const isSeedPhraseField = virtualKeyboard.targetInput &&
+                                   virtualKeyboard.targetInput.id === 'seed-phrase-input';
+            const isPassphraseField = virtualKeyboard.targetInput &&
+                                   virtualKeyboard.targetInput.id.includes('passphrase');
+            
+            if (isSeedPhraseField) {
+                updateSeedPhraseSuggestions();
+            } else if (isPassphraseField) {
+                updatePassphraseSuggestions();
+            }
         }
     }
 
     function updateCurrentWord() {
-        if (!virtualKeyboard.inputText) {
-            virtualKeyboard.currentWord = '';
+        // If we're editing a specific word, currentWord is already set
+        if (virtualKeyboard.editingWordIndex >= 0) {
             return;
         }
         
-        const words = virtualKeyboard.inputText.split(' ');
-        virtualKeyboard.currentWord = words[words.length - 1] || '';
+        // Update the combined input text for compatibility (only include completed words)
+        // Don't include currentWord while typing to avoid circular dependency
+        virtualKeyboard.inputText = virtualKeyboard.words.join(' ');
     }
 
     function updateSeedPhraseSuggestions() {
@@ -325,14 +401,14 @@ export function init() {
     }
 
     function selectSeedPhraseSuggestion(word) {
-        if (!virtualKeyboard.isOpen || !virtualKeyboard.currentWord) return;
+        if (!virtualKeyboard.isOpen) return;
 
-        // Replace the current word with the selected suggestion and add a space
-        const words = virtualKeyboard.inputText.split(' ');
-        words[words.length - 1] = word;
-        virtualKeyboard.inputText = words.join(' ') + ' '; // Add space after the word
-        virtualKeyboard.currentWord = ''; // Reset current word
-
+        // Replace the current word with the selected suggestion
+        virtualKeyboard.currentWord = word;
+        
+        // Finish editing this word and move to next
+        finishEditingWord();
+        
         updateKeyboardDisplay();
         hideSeedPhraseSuggestions();
     }
@@ -394,14 +470,14 @@ export function init() {
     }
 
     function selectPassphraseSuggestion(word) {
-        if (!virtualKeyboard.isOpen || !virtualKeyboard.currentWord) return;
+        if (!virtualKeyboard.isOpen) return;
 
-        // Replace the current word with the selected suggestion and add a space
-        const words = virtualKeyboard.inputText.split(' ');
-        words[words.length - 1] = word;
-        virtualKeyboard.inputText = words.join(' ') + ' '; // Add space after the word
-        virtualKeyboard.currentWord = ''; // Reset current word
-
+        // Replace the current word with the selected suggestion
+        virtualKeyboard.currentWord = word;
+        
+        // Finish editing this word and move to next
+        finishEditingWord();
+        
         updateKeyboardDisplay();
         hideSeedPhraseSuggestions();
     }
@@ -421,13 +497,211 @@ export function init() {
 
     function updateKeyboardDisplay() {
         const display = document.getElementById('keyboard-input-display');
-        if (display) {
-            if (virtualKeyboard.isPasswordMode) {
-                display.textContent = '*'.repeat(virtualKeyboard.inputText.length);
+        if (!display) return;
+
+        if (virtualKeyboard.isPasswordMode) {
+            // For password mode, show asterisks and simple text display
+            display.innerHTML = '';
+            display.style.cssText = `
+                display: flex;
+                align-items: center;
+                min-height: 50px;
+                padding: 15px;
+                border: 2px solid #e9ecef;
+                border-radius: 8px;
+                font-size: 1.1rem;
+                font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+                background: #f8f9fa;
+                color: #333;
+            `;
+            
+            const passwordText = document.createElement('span');
+            passwordText.textContent = '*'.repeat(virtualKeyboard.inputText.length);
+            passwordText.style.cssText = `
+                letter-spacing: 2px;
+                font-size: 1.2rem;
+            `;
+            display.appendChild(passwordText);
+            
+            // Add cursor indicator
+            const cursor = document.createElement('span');
+            cursor.className = 'cursor';
+            cursor.textContent = '|';
+            cursor.style.cssText = `
+                color: #667eea;
+                font-weight: bold;
+                animation: blink 1s infinite;
+                margin-left: 4px;
+            `;
+            display.appendChild(cursor);
+            return;
+        }
+
+        // Don't re-parse words from inputText if we're managing them directly
+        // Only parse if we don't have words array initialized
+        if (virtualKeyboard.words.length === 0 && virtualKeyboard.inputText) {
+            virtualKeyboard.words = virtualKeyboard.inputText.split(' ').filter(word => word.length > 0);
+        }
+        
+        // Create clickable word display
+        display.innerHTML = '';
+        display.style.cssText = `
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            min-height: 50px;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            background: #f8f9fa;
+            cursor: text;
+        `;
+
+        // Add each word as clickable element
+        virtualKeyboard.words.forEach((word, index) => {
+            const wordElement = document.createElement('span');
+            
+            // If this word is being edited, show the currentWord instead of the stored word
+            if (index === virtualKeyboard.editingWordIndex) {
+                wordElement.textContent = virtualKeyboard.currentWord;
             } else {
-                display.textContent = virtualKeyboard.inputText;
+                wordElement.textContent = word;
+            }
+            
+            wordElement.className = 'editable-word';
+            wordElement.dataset.index = index;
+            
+            // Style the word element
+            wordElement.style.cssText = `
+                padding: 4px 8px;
+                border-radius: 4px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                background: ${index === virtualKeyboard.editingWordIndex ? '#667eea' : '#fff'};
+                color: ${index === virtualKeyboard.editingWordIndex ? '#fff' : '#333'};
+                border: 2px solid ${index === virtualKeyboard.editingWordIndex ? '#5a67d8' : '#dee2e6'};
+            `;
+            
+            // Add hover effect (only for non-editing words)
+            if (index !== virtualKeyboard.editingWordIndex) {
+                wordElement.addEventListener('mouseenter', () => {
+                    wordElement.style.background = '#e9ecef';
+                    wordElement.style.borderColor = '#adb5bd';
+                });
+                
+                wordElement.addEventListener('mouseleave', () => {
+                    wordElement.style.background = '#fff';
+                    wordElement.style.borderColor = '#dee2e6';
+                });
+            }
+            
+            // Add click handler to edit this word
+            wordElement.addEventListener('click', () => {
+                console.log('💆 Word clicked! Index:', index, 'Word:', word);
+                editWord(index);
+            });
+            
+            display.appendChild(wordElement);
+        });
+
+        // Add current word being typed (if editing at the end and not editing a specific word)
+        if (virtualKeyboard.editingWordIndex === -1 && virtualKeyboard.currentWord) {
+            const currentWordElement = document.createElement('span');
+            currentWordElement.textContent = virtualKeyboard.currentWord;
+            currentWordElement.className = 'current-word';
+            currentWordElement.style.cssText = `
+                padding: 4px 8px;
+                border-radius: 4px;
+                background: #fff3cd;
+                color: #856404;
+                border: 2px solid #ffeaa7;
+                border-style: dashed;
+            `;
+            display.appendChild(currentWordElement);
+        }
+
+        // Add cursor indicator (show when editing at the end OR when editing a specific word)
+        if (virtualKeyboard.editingWordIndex === -1 || virtualKeyboard.editingWordIndex >= 0) {
+            const cursor = document.createElement('span');
+            cursor.className = 'cursor';
+            cursor.textContent = '|';
+            cursor.style.cssText = `
+                color: #667eea;
+                font-weight: bold;
+                animation: blink 1s infinite;
+                margin-left: 4px;
+            `;
+            display.appendChild(cursor);
+        }
+    }
+
+    // Word editing functions
+    function editWord(wordIndex) {
+        console.log('✏️ Editing word at index:', wordIndex, 'word:', virtualKeyboard.words[wordIndex]);
+        console.log('🔍 Current keyboard state:', {
+            words: virtualKeyboard.words,
+            currentWord: virtualKeyboard.currentWord,
+            editingWordIndex: virtualKeyboard.editingWordIndex
+        });
+        
+        // Set the word being edited
+        virtualKeyboard.editingWordIndex = wordIndex;
+        virtualKeyboard.currentWord = virtualKeyboard.words[wordIndex] || '';
+        virtualKeyboard.cursorPosition = virtualKeyboard.currentWord.length;
+        
+        console.log('📝 After setting edit state:', {
+            editingWordIndex: virtualKeyboard.editingWordIndex,
+            currentWord: virtualKeyboard.currentWord
+        });
+        
+        // Update display to show the word being edited
+        updateKeyboardDisplay();
+        
+        // Update suggestions for the word being edited
+        const isSeedPhraseField = virtualKeyboard.targetInput &&
+                               virtualKeyboard.targetInput.id === 'seed-phrase-input';
+        const isPassphraseField = virtualKeyboard.targetInput &&
+                               virtualKeyboard.targetInput.id.includes('passphrase');
+        
+        if (isSeedPhraseField) {
+            updateSeedPhraseSuggestions();
+        } else if (isPassphraseField) {
+            updatePassphraseSuggestions();
+        }
+    }
+
+    function finishEditingWord() {
+        if (virtualKeyboard.editingWordIndex >= 0) {
+            // Update the word in the words array
+            if (virtualKeyboard.currentWord.trim()) {
+                virtualKeyboard.words[virtualKeyboard.editingWordIndex] = virtualKeyboard.currentWord.trim();
+            } else {
+                // Remove empty word
+                virtualKeyboard.words.splice(virtualKeyboard.editingWordIndex, 1);
+            }
+        } else {
+            // Adding new word at the end
+            if (virtualKeyboard.currentWord.trim()) {
+                virtualKeyboard.words.push(virtualKeyboard.currentWord.trim());
             }
         }
+        
+        // Rebuild input text from words
+        virtualKeyboard.inputText = virtualKeyboard.words.join(' ');
+        
+        // Reset editing state
+        virtualKeyboard.editingWordIndex = -1;
+        virtualKeyboard.currentWord = '';
+        virtualKeyboard.cursorPosition = 0;
+        
+        // Update display
+        updateKeyboardDisplay();
+        
+        // Hide suggestions
+        hideSeedPhraseSuggestions();
     }
 
     function updateKeyboardKeys() {

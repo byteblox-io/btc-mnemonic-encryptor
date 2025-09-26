@@ -570,13 +570,25 @@ function validateEncryptForm() {
     const password1 = getValue('encrypt-password1');
     const password2 = getValue('encrypt-password2');
     
+    // Collect validation messages
+    const validationMessages = [];
+    
     // Passphrase validation (required)
     const isPassphraseValid = passphrase1 && passphrase1 === passphrase2;
+    if (passphrase1 && passphrase2 && !isPassphraseValid) {
+        validationMessages.push('⚠️ Passphrases do not match');
+    }
     
     // Password validation (optional) - if provided, both fields must match
     const isPasswordValid = !password1 || (password1 && password1 === password2);
+    if (password1 && password2 && !isPasswordValid) {
+        validationMessages.push('⚠️ Passwords do not match');
+    }
     
     const isValid = seedPhrase && isPassphraseValid && isPasswordValid;
+    
+    // Update validation display
+    updateValidationDisplay('encrypt-validation', validationMessages);
     
     const encryptBtn = document.getElementById('encrypt-btn');
     const encryptWithWalletBtn = document.getElementById('encrypt-with-wallet-btn');
@@ -604,6 +616,9 @@ function validateDecryptForm() {
     // Only content and passphrase are required
     const isValid = content && passphrase;
     
+    // Clear validation messages for decrypt form (no mismatch validation needed)
+    updateValidationDisplay('decrypt-validation', []);
+    
     const decryptBtn = document.getElementById('decrypt-btn');
     if (decryptBtn) {
         decryptBtn.disabled = !isValid;
@@ -629,6 +644,21 @@ function setStatus(id, message, type = 'info') {
     if (element) {
         element.textContent = message;
         element.className = `status-label status-${type}`;
+    }
+}
+
+function updateValidationDisplay(validationBoxId, messages) {
+    const validationBox = document.getElementById(validationBoxId);
+    if (!validationBox) return;
+    
+    if (messages.length === 0) {
+        validationBox.classList.add('hidden');
+        validationBox.innerHTML = '';
+    } else {
+        validationBox.classList.remove('hidden');
+        validationBox.innerHTML = messages.map(msg => 
+            `<div class="validation-error">${msg}</div>`
+        ).join('');
     }
 }
 
